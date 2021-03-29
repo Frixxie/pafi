@@ -54,7 +54,7 @@ impl Node {
         }
         nodes
     }
-    pub fn traveling_sailsman_greedy(nodes: Vec<Node>) -> Vec<Node> {
+    pub fn greedy_tsp(nodes: Vec<Node>) -> Vec<Node> {
         let mut cpy = nodes.to_vec();
         let mut reses: Vec<Node> = Vec::new();
         let mut i: usize = 0;
@@ -91,13 +91,13 @@ fn main() {
         node_2,
         node_1.distance_to(&node_2)
     );
-    let nodes_unord = Node::create_rand_nodes(50, 10.0, 790.0, 10.0, 590.0);
-    let nodes = Node::traveling_sailsman_greedy(nodes_unord);
+    let nodes_unord = Node::create_rand_nodes(20, 10.0, 990.0, 10.0, 790.0);
+    let nodes = Node::greedy_tsp(nodes_unord);
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
     let window = video_subsystem
-        .window("PaFi", 800, 600)
+        .window("PaFi", 1000, 800)
         .position_centered()
         .build()
         .unwrap();
@@ -121,7 +121,7 @@ fn main() {
             }
         }
         for (i, node) in nodes.iter().enumerate() {
-            canvas.set_draw_color(Color::RGB(255 - i as u8, 255 - i as u8, 255 - i as u8));
+            canvas.set_draw_color(Color::RGB(255, 255, 255));
             canvas.draw_rect(node.into_rect(10, 10)).unwrap();
             if i < (nodes.len() - 1) {
                 canvas
