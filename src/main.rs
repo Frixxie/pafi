@@ -91,7 +91,7 @@ fn main() {
         node_2,
         node_1.distance_to(&node_2)
     );
-    let nodes_unord = Node::create_rand_nodes(20, 10.0, 990.0, 10.0, 790.0);
+    let nodes_unord = Node::create_rand_nodes(1024, 10.0, 990.0, 10.0, 790.0);
     let nodes = Node::greedy_tsp(nodes_unord);
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -122,7 +122,7 @@ fn main() {
         }
         for (i, node) in nodes.iter().enumerate() {
             canvas.set_draw_color(Color::RGB(255, 255, 255));
-            canvas.draw_rect(node.into_rect(10, 10)).unwrap();
+            canvas.draw_rect(node.into_rect(5, 5)).unwrap();
             if i < (nodes.len() - 1) {
                 canvas
                     .draw_line(node.into_point(), nodes[i + 1].into_point())
