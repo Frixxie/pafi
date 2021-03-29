@@ -6,6 +6,7 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 
+#[derive(Clone, Copy)]
 struct Node {
     x: f32,
     y: f32,
@@ -31,12 +32,53 @@ impl Node {
         sdl2::rect::Point::new(self.x as i32, self.y as i32)
     }
 
-    pub fn create_rand_nodes(n: usize, min_x: f32, max_x: f32, min_y: f32, max_y: f32) -> Vec<Node> {
+    pub fn into_rect(&self, w: i32, h: i32) -> sdl2::rect::Rect {
+        sdl2::rect::Rect::new(
+            (self.x as i32) - w / 2,
+            (self.y as i32) - h / 2,
+            w as u32,
+            h as u32,
+        )
+    }
+
+    pub fn create_rand_nodes(
+        n: usize,
+        min_x: f32,
+        max_x: f32,
+        min_y: f32,
+        max_y: f32,
+    ) -> Vec<Node> {
         let mut nodes: Vec<Node> = Vec::new();
         for _ in 0..n {
             nodes.push(Node::rand_new(min_x, max_x, min_y, max_y));
         }
         nodes
+    }
+    pub fn traveling_sailsman(nodes: Vec<Node>) -> Vec<Node> {
+        let mut cpy = nodes.to_vec();
+        let mut reses: Vec<Node> = Vec::new();
+        for i in 0..cpy.len() - 1 {
+            let node = cpy.pop();
+            match node {
+                Some(node) => {
+                    let mut min = std::f32::INFINITY;
+                    let mut min_j: usize = i;
+                    for (j, other_node) in cpy.iter().enumerate() {
+                        let tmp = node.distance_to(other_node);
+                        if tmp < min {
+                            min = tmp;
+                            min_j = j;
+                        }
+                    }
+                    println!("{}, {}, {}, {}", min, node.distance_to(&nodes[min_j + i]), i, min_j + i);
+                    reses.push(nodes[i]);
+                    reses.push(nodes[min_j + i]);
+                    cpy.remove(min_j);
+                },
+                None => break,
+            }
+        }
+        reses
     }
 }
 
@@ -55,6 +97,8 @@ fn main() {
         node_2,
         node_1.distance_to(&node_2)
     );
+    let nodes_unord = Node::create_rand_nodes(100, 10.0, 790.0, 10.0, 590.0);
+    let nodes = Node::traveling_sailsman(nodes_unord);
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
@@ -82,10 +126,9 @@ fn main() {
                 _ => {}
             }
         }
-        let nodes = Node::create_rand_nodes(100, 0.0, 800.0, 0.0, 600.0);
         canvas.set_draw_color(Color::RGB(255, 255, 255));
         for (i, node) in nodes.iter().enumerate() {
-            //canvas.draw_point(node.into_point()).unwrap();
+            canvas.draw_rect(node.into_rect(10, 10)).unwrap();
             if i < (nodes.len() - 1) {
                 canvas
                     .draw_line(node.into_point(), nodes[i + 1].into_point())
