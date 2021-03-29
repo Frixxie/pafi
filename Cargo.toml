@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 rand = { version = "0.7", default-features = true }
+sdl2 = "0.34.2"
