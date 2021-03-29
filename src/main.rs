@@ -15,17 +15,28 @@ impl Node {
     pub fn new(x: f32, y: f32) -> Node {
         Node { x, y }
     }
+
     pub fn rand_new(min_x: f32, max_x: f32, min_y: f32, max_y: f32) -> Node {
         let mut rng = thread_rng();
         let x: f32 = rng.gen_range(min_x, max_x).floor();
         let y: f32 = rng.gen_range(min_y, max_y).floor();
         Node { x, y }
     }
+
     pub fn distance_to(&self, node: &Node) -> f32 {
         (((self.x - node.x) * (self.x - node.x)) + ((self.y - node.y) * (self.y - node.y))).sqrt()
     }
+
     pub fn into_point(&self) -> sdl2::rect::Point {
         sdl2::rect::Point::new(self.x as i32, self.y as i32)
+    }
+
+    pub fn create_rand_nodes(n: usize, min_x: f32, max_x: f32, min_y: f32, max_y: f32) -> Vec<Node> {
+        let mut nodes: Vec<Node> = Vec::new();
+        for _ in 0..n {
+            nodes.push(Node::rand_new(min_x, max_x, min_y, max_y));
+        }
+        nodes
     }
 }
 
@@ -36,10 +47,6 @@ impl fmt::Display for Node {
 }
 
 fn main() {
-    let mut nodes: Vec<Node> = Vec::new(); 
-    for _ in 0..100 {
-        nodes.push(Node::rand_new(0.0, 800.0, 0.0, 600.0));
-    }
     let node_1 = Node::new(400.0, 300.0);
     let node_2 = Node::new(0.0, 2.0);
     println!(
@@ -75,13 +82,18 @@ fn main() {
                 _ => {}
             }
         }
+        let nodes = Node::create_rand_nodes(100, 0.0, 800.0, 0.0, 600.0);
         canvas.set_draw_color(Color::RGB(255, 255, 255));
         for (i, node) in nodes.iter().enumerate() {
             //canvas.draw_point(node.into_point()).unwrap();
             if i < (nodes.len() - 1) {
-                canvas.draw_line(node.into_point(), nodes[i + 1].into_point()).unwrap();
+                canvas
+                    .draw_line(node.into_point(), nodes[i + 1].into_point())
+                    .unwrap();
             } else {
-                canvas.draw_line(node.into_point(), nodes[0].into_point()).unwrap();
+                canvas
+                    .draw_line(node.into_point(), nodes[0].into_point())
+                    .unwrap();
             }
         }
         canvas.present();
