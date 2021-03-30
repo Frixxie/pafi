@@ -54,7 +54,9 @@ impl Node {
         }
         nodes
     }
-    pub fn greedy_tsp(nodes: Vec<Node>) -> Vec<Node> {
+
+    /// Traveling salesman problem next neighbour
+    pub fn tsp_nn(nodes: Vec<Node>) -> Vec<Node> {
         let mut cpy = nodes.to_vec();
         let mut reses: Vec<Node> = Vec::new();
         let mut i: usize = 0;
@@ -83,6 +85,7 @@ impl fmt::Display for Node {
 }
 
 fn main() {
+    //demo of using distance_to
     let node_1 = Node::new(400.0, 300.0);
     let node_2 = Node::new(0.0, 2.0);
     println!(
@@ -91,8 +94,12 @@ fn main() {
         node_2,
         node_1.distance_to(&node_2)
     );
+
+    //setting up and solving rand nodes
     let nodes_unord = Node::create_rand_nodes(1024, 10.0, 990.0, 10.0, 790.0);
-    let nodes = Node::greedy_tsp(nodes_unord);
+    let nodes = Node::tsp_nn(nodes_unord);
+    
+    //setting up sdl
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
@@ -110,6 +117,7 @@ fn main() {
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
 
+        //keyevents
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -120,6 +128,8 @@ fn main() {
                 _ => {}
             }
         }
+
+        //drawing nodes
         for (i, node) in nodes.iter().enumerate() {
             canvas.set_draw_color(Color::RGB(255, 255, 255));
             canvas.draw_rect(node.into_rect(5, 5)).unwrap();
