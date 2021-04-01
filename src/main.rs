@@ -78,8 +78,8 @@ impl Node {
                     reses_inner.push(node);
                     let mut min: f32 = std::f32::INFINITY;
                     let mut min_k: usize = 0;
-                    for (k, other_nodes) in cpy.iter().enumerate() {
-                        let tmp = node.distance_to(other_nodes);
+                    for (k, other_node) in cpy.iter().enumerate() {
+                        let tmp = node.distance_to(other_node);
                         if tmp < min {
                             min = tmp;
                             min_k = k;
@@ -87,6 +87,7 @@ impl Node {
                     }
                     j = min_k
                 }
+                println!("{}, {}", i, Node::calc_path(&reses_inner));
                 reses_inner
             })
             .collect();
@@ -98,11 +99,22 @@ impl Node {
         let mut min: f32 = std::f32::INFINITY;
         let mut min_i: usize = 0;
         for (i, len) in paths_len.iter().enumerate() {
+            println!("{}, {}, {}, {}", i, len, min, min_i);
             if len < &min {
                 min = *len;
                 min_i = i;
             }
         }
+        println!(
+            "{}, {}, {}",
+            min,
+            min_i,
+            reses
+                .par_iter()
+                .map(|nodes| Node::calc_path(nodes))
+                .sum::<f32>()
+                / paths_len.len() as f32
+        );
         reses[min_i].to_vec()
     }
 }
@@ -125,7 +137,7 @@ fn main() {
     );
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(8192, 10.0, 990.0, 10.0, 790.0);
+    let nodes_unord = Node::create_rand_nodes(256, 10.0, 1390.0, 10.0, 990.0);
     let nodes = Node::tsp_nnn(nodes_unord);
 
     //setting up sdl
@@ -133,7 +145,7 @@ fn main() {
     let video_subsystem = sdl_context.video().unwrap();
 
     let window = video_subsystem
-        .window("PaFi", 1000, 800)
+        .window("PaFi", 1400, 1000)
         .position_centered()
         .build()
         .unwrap();
