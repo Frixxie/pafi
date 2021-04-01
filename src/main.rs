@@ -63,40 +63,33 @@ impl Node {
             .enumerate()
             .map(|(i, node)| node.distance_to(&nodes[(i + 1) % (nodes.len() - 1)]))
             .sum()
-        // let mut res: f32 = 0.0;
-        // for (i, node) in nodes.iter().enumerate() {
-        //     if i < (nodes.len() - 1) {
-        //         res += node.distance_to(&nodes[i + 1]);
-        //     } else {
-        //         res += node.distance_to(&nodes[0]);
-        //     }
-        // }
-        // res
     }
 
-    /// Traveling salesman problem next neighbour
-    pub fn tsp_nn(nodes: Vec<Node>) -> Vec<Node> {
-        let mut reses: Vec<Vec<Node>> = Vec::new();
-        for i in 0..nodes.len() - 1 {
-            let mut cpy = nodes.to_vec();
-            let mut reses_inner: Vec<Node> = Vec::new();
-            let mut j: usize = i % (nodes.len() - 1);
-            while (cpy.len()) > 0 {
-                let node = cpy.remove(j);
-                reses_inner.push(node);
-                let mut min: f32 = std::f32::INFINITY;
-                let mut min_k: usize = 0;
-                for (k, other_nodes) in cpy.iter().enumerate() {
-                    let tmp = node.distance_to(other_nodes);
-                    if tmp < min {
-                        min = tmp;
-                        min_k = k;
+    /// Traveling salesman problem next nearest neighbour
+    pub fn tsp_nnn(nodes: Vec<Node>) -> Vec<Node> {
+        let reses: Vec<Vec<Node>> = (0..(nodes.len() - 1))
+            .into_par_iter()
+            .map(|i| {
+                let mut cpy = nodes.to_vec();
+                let mut reses_inner: Vec<Node> = Vec::new();
+                let mut j: usize = i % (nodes.len() - 1);
+                while (cpy.len()) > 0 {
+                    let node = cpy.remove(j);
+                    reses_inner.push(node);
+                    let mut min: f32 = std::f32::INFINITY;
+                    let mut min_k: usize = 0;
+                    for (k, other_nodes) in cpy.iter().enumerate() {
+                        let tmp = node.distance_to(other_nodes);
+                        if tmp < min {
+                            min = tmp;
+                            min_k = k;
+                        }
                     }
+                    j = min_k
                 }
-                j = min_k
-            }
-            reses.push(reses_inner);
-        }
+                reses_inner
+            })
+            .collect();
         let paths_len: Vec<f32> = reses
             .par_iter()
             .map(|nodes| Node::calc_path(nodes))
@@ -132,8 +125,8 @@ fn main() {
     );
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(256, 10.0, 990.0, 10.0, 790.0);
-    let nodes = Node::tsp_nn(nodes_unord);
+    let nodes_unord = Node::create_rand_nodes(8192, 10.0, 990.0, 10.0, 790.0);
+    let nodes = Node::tsp_nnn(nodes_unord);
 
     //setting up sdl
     let sdl_context = sdl2::init().unwrap();
