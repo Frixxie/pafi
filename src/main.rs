@@ -50,30 +50,29 @@ impl Node {
         min_y: f32,
         max_y: f32,
     ) -> Vec<Node> {
-        let mut nodes: Vec<Node> = Vec::new();
-        for _ in 0..n {
-            nodes.push(Node::rand_new(min_x, max_x, min_y, max_y));
-        }
-        nodes
+        (0..n)
+            .into_par_iter()
+            .map(|_| Node::rand_new(min_x, max_x, min_y, max_y))
+            .collect()
     }
 
     pub fn calc_path(nodes: &Vec<Node>) -> f32 {
         nodes
             .par_iter()
             .enumerate()
-            .map(|(i, node)| node.distance_to(&nodes[(i + 1) % (nodes.len() - 1)]))
+            .map(|(i, node)| node.distance_to(&nodes[(i + 1) % (nodes.len())]))
             .sum()
     }
 
     /// Traveling salesman problem next nearest neighbour
     pub fn tsp_nnn(nodes: Vec<Node>) -> Vec<Node> {
-        let reses: Vec<Vec<Node>> = (0..(nodes.len() - 1))
+        let reses: Vec<Vec<Node>> = (0..nodes.len())
             .into_par_iter()
             .map(|i| {
                 let mut cpy = nodes.to_vec();
                 let mut reses_inner: Vec<Node> = Vec::new();
-                let mut j: usize = i % (nodes.len() - 1);
-                while (cpy.len()) > 0 {
+                let mut j: usize = i % nodes.len();
+                while cpy.len() > 0 {
                     let node = cpy.remove(j);
                     reses_inner.push(node);
                     let mut min: f32 = std::f32::INFINITY;
@@ -87,7 +86,7 @@ impl Node {
                     }
                     j = min_k
                 }
-                println!("{}, {}", i, Node::calc_path(&reses_inner));
+                // println!("{}, {}", i, Node::calc_path(&reses_inner));
                 reses_inner
             })
             .collect();
@@ -99,7 +98,7 @@ impl Node {
         let mut min: f32 = std::f32::INFINITY;
         let mut min_i: usize = 0;
         for (i, len) in paths_len.iter().enumerate() {
-            println!("{}, {}, {}, {}", i, len, min, min_i);
+            // println!("{}, {}, {}, {}", i, len, min, min_i);
             if len < &min {
                 min = *len;
                 min_i = i;
@@ -137,7 +136,7 @@ fn main() {
     );
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(256, 10.0, 1390.0, 10.0, 990.0);
+    let nodes_unord = Node::create_rand_nodes(2048, 10.0, 1590.0, 10.0, 990.0);
     let nodes = Node::tsp_nnn(nodes_unord);
 
     //setting up sdl
@@ -145,7 +144,7 @@ fn main() {
     let video_subsystem = sdl_context.video().unwrap();
 
     let window = video_subsystem
-        .window("PaFi", 1400, 1000)
+        .window("PaFi", 1600, 1000)
         .position_centered()
         .build()
         .unwrap();
@@ -172,8 +171,9 @@ fn main() {
 
         //drawing nodes
         for (i, node) in nodes.iter().enumerate() {
+            canvas.set_draw_color(Color::RGB(255, 100, 55));
+            canvas.draw_rect(node.into_rect(8, 8)).unwrap();
             canvas.set_draw_color(Color::RGB(255, 255, 255));
-            canvas.draw_rect(node.into_rect(7, 7)).unwrap();
             if i < (nodes.len() - 1) {
                 canvas
                     .draw_line(node.into_point(), nodes[i + 1].into_point())
