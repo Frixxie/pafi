@@ -6,6 +6,8 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 
+use rayon::prelude::*;
+
 #[derive(Clone, Copy)]
 struct Node {
     x: f32,
@@ -56,15 +58,20 @@ impl Node {
     }
 
     pub fn calc_path(nodes: &Vec<Node>) -> f32 {
-        let mut res: f32 = 0.0;
-        for (i, node) in nodes.iter().enumerate() {
-            if i < (nodes.len() - 1) {
-                res += node.distance_to(&nodes[i + 1]);
-            } else {
-                res += node.distance_to(&nodes[0]);
-            }
-        }
-        res
+        nodes
+            .par_iter()
+            .enumerate()
+            .map(|(i, node)| node.distance_to(&nodes[(i + 1) % (nodes.len() - 1)]))
+            .sum()
+        // let mut res: f32 = 0.0;
+        // for (i, node) in nodes.iter().enumerate() {
+        //     if i < (nodes.len() - 1) {
+        //         res += node.distance_to(&nodes[i + 1]);
+        //     } else {
+        //         res += node.distance_to(&nodes[0]);
+        //     }
+        // }
+        // res
     }
 
     /// Traveling salesman problem next neighbour
@@ -90,12 +97,16 @@ impl Node {
             }
             reses.push(reses_inner);
         }
+        let paths_len: Vec<f32> = reses
+            .par_iter()
+            .map(|nodes| Node::calc_path(nodes))
+            .collect();
+
         let mut min: f32 = std::f32::INFINITY;
         let mut min_i: usize = 0;
-        for (i, nodes) in reses.iter().enumerate() {
-            let tmp = Node::calc_path(nodes);
-            if tmp < min {
-                min = tmp;
+        for (i, len) in paths_len.iter().enumerate() {
+            if len < &min {
+                min = *len;
                 min_i = i;
             }
         }
