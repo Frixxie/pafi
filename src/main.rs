@@ -55,26 +55,51 @@ impl Node {
         nodes
     }
 
+    pub fn calc_path(nodes: &Vec<Node>) -> f32 {
+        let mut res: f32 = 0.0;
+        for (i, node) in nodes.iter().enumerate() {
+            if i < (nodes.len() - 1) {
+                res += node.distance_to(&nodes[i + 1]);
+            } else {
+                res += node.distance_to(&nodes[0]);
+            }
+        }
+        res
+    }
+
     /// Traveling salesman problem next neighbour
     pub fn tsp_nn(nodes: Vec<Node>) -> Vec<Node> {
-        let mut cpy = nodes.to_vec();
-        let mut reses: Vec<Node> = Vec::new();
-        let mut i: usize = 0;
-        while (cpy.len()) > 0 {
-            let node = cpy.remove(i);
-            reses.push(node);
-            let mut min: f32 = std::f32::INFINITY;
-            let mut min_j: usize = 0;
-            for (j, other_nodes) in cpy.iter().enumerate() {
-                let tmp = node.distance_to(other_nodes);
-                if tmp < min {
-                    min = tmp;
-                    min_j = j;
+        let mut reses: Vec<Vec<Node>> = Vec::new();
+        for i in 0..nodes.len() - 1 {
+            let mut cpy = nodes.to_vec();
+            let mut reses_inner: Vec<Node> = Vec::new();
+            let mut j: usize = i % (nodes.len() - 1);
+            while (cpy.len()) > 0 {
+                let node = cpy.remove(j);
+                reses_inner.push(node);
+                let mut min: f32 = std::f32::INFINITY;
+                let mut min_k: usize = 0;
+                for (k, other_nodes) in cpy.iter().enumerate() {
+                    let tmp = node.distance_to(other_nodes);
+                    if tmp < min {
+                        min = tmp;
+                        min_k = k;
+                    }
                 }
+                j = min_k
             }
-            i = min_j
+            reses.push(reses_inner);
         }
-        reses
+        let mut min: f32 = std::f32::INFINITY;
+        let mut min_i: usize = 0;
+        for (i, nodes) in reses.iter().enumerate() {
+            let tmp = Node::calc_path(nodes);
+            if tmp < min {
+                min = tmp;
+                min_i = i;
+            }
+        }
+        reses[min_i].to_vec()
     }
 }
 
@@ -96,9 +121,9 @@ fn main() {
     );
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(1024, 10.0, 990.0, 10.0, 790.0);
+    let nodes_unord = Node::create_rand_nodes(256, 10.0, 990.0, 10.0, 790.0);
     let nodes = Node::tsp_nn(nodes_unord);
-    
+
     //setting up sdl
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -132,7 +157,7 @@ fn main() {
         //drawing nodes
         for (i, node) in nodes.iter().enumerate() {
             canvas.set_draw_color(Color::RGB(255, 255, 255));
-            canvas.draw_rect(node.into_rect(5, 5)).unwrap();
+            canvas.draw_rect(node.into_rect(7, 7)).unwrap();
             if i < (nodes.len() - 1) {
                 canvas
                     .draw_line(node.into_point(), nodes[i + 1].into_point())
