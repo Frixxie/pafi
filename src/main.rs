@@ -30,6 +30,15 @@ impl Node {
         (((self.x - node.x) * (self.x - node.x)) + ((self.y - node.y) * (self.y - node.y))).sqrt()
     }
 
+    ///See: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
+    ///For explaination on how this works
+    pub fn line_intersect(&self, p2: Node, p3: Node, p4: Node) -> bool {
+        if (self.x - p2.x) * (p3.y - p4.y) - ((self.y - p2.y) * (p3.x - p4.x)) > 0.0 {
+            return true;
+        }
+        false
+    }
+
     pub fn into_point(&self) -> sdl2::rect::Point {
         sdl2::rect::Point::new(self.x as i32, self.y as i32)
     }
@@ -136,7 +145,7 @@ fn main() {
     );
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(2048, 10.0, 1590.0, 10.0, 990.0);
+    let nodes_unord = Node::create_rand_nodes(1024, 10.0, 1590.0, 10.0, 990.0);
     let nodes = Node::tsp_nnn(nodes_unord);
 
     //setting up sdl
@@ -153,6 +162,7 @@ fn main() {
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
+    let mut iter: usize = 0;
     'running: loop {
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
@@ -169,10 +179,13 @@ fn main() {
             }
         }
 
-        //drawing nodes
-        for (i, node) in nodes.iter().enumerate() {
+        for node in nodes.iter() {
             canvas.set_draw_color(Color::RGB(255, 100, 55));
             canvas.draw_rect(node.into_rect(8, 8)).unwrap();
+        }
+
+        //drawing nodes
+        for (i, node) in nodes.iter().enumerate() {
             canvas.set_draw_color(Color::RGB(255, 255, 255));
             if i < (nodes.len() - 1) {
                 canvas
@@ -183,6 +196,13 @@ fn main() {
                     .draw_line(node.into_point(), nodes[0].into_point())
                     .unwrap();
             }
+            if iter == i {
+                break;
+            }
+        }
+        iter += 1;
+        if iter > nodes.len() {
+            iter = 0
         }
         canvas.present();
     }
