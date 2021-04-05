@@ -34,9 +34,9 @@ impl Node {
     ///For explaination on how this works
     pub fn line_intersect(&self, p2: Node, p3: Node, p4: Node) -> bool {
         if (self.x - p2.x) * (p3.y - p4.y) - ((self.y - p2.y) * (p3.x - p4.x)) > 0.0 {
-            return true;
+            return false;
         }
-        false
+        true
     }
 
     pub fn into_point(&self) -> sdl2::rect::Point {
@@ -69,8 +69,51 @@ impl Node {
         nodes
             .par_iter()
             .enumerate()
-            .map(|(i, node)| node.distance_to(&nodes[(i + 1) % (nodes.len())]))
+            .map(|(i, node)| node.distance_to(&nodes[(i + 1).rem_euclid(nodes.len())]))
             .sum()
+    }
+
+    fn check_intersections(nodes: &Vec<Node>) -> i32 {
+        let mut intersections = 0;
+        let mut i: usize = 0;
+        while i < nodes.len() {
+            if nodes[i].line_intersect(
+                nodes[(i + 1).rem_euclid(nodes.len())],
+                nodes[(i + 2).rem_euclid(nodes.len())],
+                nodes[(i + 3).rem_euclid(nodes.len())],
+            ) {
+                intersections += 1;
+            }
+            i += 2;
+        }
+        intersections
+    }
+
+    pub fn tsp_2opt(nodes: Vec<Node>) -> Vec<Node> {
+        let mut reses: Vec<Node> = nodes.to_vec();
+        let mut crossed: bool = true;
+        let mut i: usize = 0;
+        while crossed != false {
+            if nodes[i].line_intersect(
+                nodes[(i + 1).rem_euclid(nodes.len())],
+                nodes[(i + 2).rem_euclid(nodes.len())],
+                nodes[(i + 3).rem_euclid(nodes.len())],
+            ) {
+                reses.swap(
+                    (i + 1).rem_euclid(nodes.len()),
+                    (i + 3).rem_euclid(nodes.len()),
+                );
+                println!("Swapped {}, {}", nodes[(i + 1).rem_euclid(nodes.len())], nodes[(i + 3).rem_euclid(nodes.len())]);
+            }
+            let intersections = Node::check_intersections(&reses);
+            if intersections < 10 {
+                crossed = false
+            }
+            println!("{} intersections", intersections);
+            i += 2;
+            i = i.rem_euclid(reses.len());
+        }
+        reses
     }
 
     /// Traveling salesman problem next nearest neighbour
@@ -95,7 +138,6 @@ impl Node {
                     }
                     j = min_k
                 }
-                // println!("{}, {}", i, Node::calc_path(&reses_inner));
                 reses_inner
             })
             .collect();
@@ -107,7 +149,6 @@ impl Node {
         let mut min: f32 = std::f32::INFINITY;
         let mut min_i: usize = 0;
         for (i, len) in paths_len.iter().enumerate() {
-            // println!("{}, {}, {}, {}", i, len, min, min_i);
             if len < &min {
                 min = *len;
                 min_i = i;
@@ -145,8 +186,9 @@ fn main() {
     );
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(1024, 10.0, 1590.0, 10.0, 990.0);
-    let nodes = Node::tsp_nnn(nodes_unord);
+    let nodes_unord = Node::create_rand_nodes(20, 10.0, 1590.0, 10.0, 990.0);
+    let nodes_nnn = Node::tsp_nnn(nodes_unord);
+    let nodes = Node::tsp_2opt(nodes_nnn);
 
     //setting up sdl
     let sdl_context = sdl2::init().unwrap();
