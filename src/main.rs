@@ -14,6 +14,18 @@ struct Node {
     y: f32,
 }
 
+impl From<Node> for sdl2::rect::Point {
+    fn from(node: Node) -> sdl2::rect::Point {
+        sdl2::rect::Point::new(node.x as i32, node.y as i32)
+    }
+}
+
+impl From<&Node> for sdl2::rect::Point {
+    fn from(node: &Node) -> sdl2::rect::Point {
+        sdl2::rect::Point::new(node.x as i32, node.y as i32)
+    }
+}
+
 impl Node {
     pub fn new(x: f32, y: f32) -> Node {
         Node { x, y }
@@ -33,14 +45,15 @@ impl Node {
     ///See: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
     ///For explaination on how this works
     pub fn line_intersect(&self, p2: Node, p3: Node, p4: Node) -> bool {
-        if (self.x - p2.x) * (p3.y - p4.y) - ((self.y - p2.y) * (p3.x - p4.x)) > 0.0 {
-            return false;
+        let t = ((self.x - p3.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x))
+            / ((self.x - p2.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x));
+        let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p2.x))
+            / ((self.x - p2.x) * (p3.y - p4.y) - (self.y - p2.y) * (p3.x - p4.x));
+        if (t >= 0.0 && t <= 1.0) || (u >= 0.0 && u <= 1.0) {
+            // println!("{}, {}", t, u);
+            return true;
         }
-        true
-    }
-
-    pub fn into_point(&self) -> sdl2::rect::Point {
-        sdl2::rect::Point::new(self.x as i32, self.y as i32)
+        false
     }
 
     pub fn into_rect(&self, w: i32, h: i32) -> sdl2::rect::Rect {
@@ -103,15 +116,21 @@ impl Node {
                     (i + 1).rem_euclid(nodes.len()),
                     (i + 3).rem_euclid(nodes.len()),
                 );
-                println!("Swapped {}, {}", nodes[(i + 1).rem_euclid(nodes.len())], nodes[(i + 3).rem_euclid(nodes.len())]);
+                println!(
+                    "Swapped {}:{}, {}:{}",
+                    (i + 1).rem_euclid(nodes.len()),
+                    nodes[(i + 1).rem_euclid(nodes.len())],
+                    (i + 3).rem_euclid(nodes.len()),
+                    nodes[(i + 3).rem_euclid(nodes.len())]
+                );
             }
-            let intersections = Node::check_intersections(&reses);
-            if intersections < 10 {
-                crossed = false
-            }
-            println!("{} intersections", intersections);
             i += 2;
             i = i.rem_euclid(reses.len());
+            let intersections = Node::check_intersections(&reses);
+            if intersections < 1000 {
+                crossed = false;
+            }
+            println!("intersections {}", intersections);
         }
         reses
     }
@@ -186,9 +205,9 @@ fn main() {
     );
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(20, 10.0, 1590.0, 10.0, 990.0);
-    let nodes_nnn = Node::tsp_nnn(nodes_unord);
-    let nodes = Node::tsp_2opt(nodes_nnn);
+    let nodes_unord = Node::create_rand_nodes(4096, 10.0, 1590.0, 10.0, 990.0);
+    let nodes = Node::tsp_nnn(nodes_unord);
+    // let nodes = Node::tsp_2opt(nodes_nnn);
 
     //setting up sdl
     let sdl_context = sdl2::init().unwrap();
@@ -229,15 +248,9 @@ fn main() {
         //drawing nodes
         for (i, node) in nodes.iter().enumerate() {
             canvas.set_draw_color(Color::RGB(255, 255, 255));
-            if i < (nodes.len() - 1) {
-                canvas
-                    .draw_line(node.into_point(), nodes[i + 1].into_point())
-                    .unwrap();
-            } else {
-                canvas
-                    .draw_line(node.into_point(), nodes[0].into_point())
-                    .unwrap();
-            }
+            canvas
+                .draw_line(node, nodes[(i + 1).rem_euclid(nodes.len())])
+                .unwrap();
             if iter == i {
                 break;
             }
