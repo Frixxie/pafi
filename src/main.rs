@@ -49,7 +49,7 @@ impl Node {
             / ((self.x - p2.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x));
         let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p2.x))
             / ((self.x - p2.x) * (p3.y - p4.y) - (self.y - p2.y) * (p3.x - p4.x));
-        if (t >= 0.0 && t <= 1.0) || (u >= 0.0 && u <= 1.0) {
+        if (0.0..=1.0).contains(&t) || (0.0..=1.0).contains(&u) {
             // println!("{}, {}", t, u);
             return true;
         }
@@ -78,7 +78,7 @@ impl Node {
             .collect()
     }
 
-    pub fn calc_path(nodes: &Vec<Node>) -> f32 {
+    pub fn calc_path(nodes: &[Node]) -> f32 {
         nodes
             .par_iter()
             .enumerate()
@@ -86,7 +86,7 @@ impl Node {
             .sum()
     }
 
-    fn check_intersections(nodes: &Vec<Node>) -> i32 {
+    fn check_intersections(nodes: &[Node]) -> i32 {
         let mut intersections = 0;
         let mut i: usize = 0;
         while i < nodes.len() {
@@ -106,7 +106,7 @@ impl Node {
         let mut reses: Vec<Node> = nodes.to_vec();
         let mut crossed: bool = true;
         let mut i: usize = 0;
-        while crossed != false {
+        while crossed {
             if nodes[i].line_intersect(
                 nodes[(i + 1).rem_euclid(nodes.len())],
                 nodes[(i + 2).rem_euclid(nodes.len())],
@@ -143,7 +143,7 @@ impl Node {
                 let mut cpy = nodes.to_vec();
                 let mut reses_inner: Vec<Node> = Vec::new();
                 let mut j: usize = i % nodes.len();
-                while cpy.len() > 0 {
+                while !cpy.is_empty() {
                     let node = cpy.remove(j);
                     reses_inner.push(node);
                     let mut min: f32 = std::f32::INFINITY;
