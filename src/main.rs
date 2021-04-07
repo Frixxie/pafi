@@ -205,7 +205,7 @@ fn main() {
     );
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(4096, 10.0, 1590.0, 10.0, 990.0);
+    let nodes_unord = Node::create_rand_nodes(8, 10.0, 1590.0, 10.0, 990.0);
     let nodes = Node::tsp_nnn(nodes_unord);
     // let nodes = Node::tsp_2opt(nodes_nnn);
 
@@ -223,7 +223,6 @@ fn main() {
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
-    let mut iter: usize = 0;
     'running: loop {
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
@@ -251,13 +250,6 @@ fn main() {
             canvas
                 .draw_line(node, nodes[(i + 1).rem_euclid(nodes.len())])
                 .unwrap();
-            if iter == i {
-                break;
-            }
-        }
-        iter += 1;
-        if iter > nodes.len() {
-            iter = 0
         }
         canvas.present();
     }
