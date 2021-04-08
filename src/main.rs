@@ -1,3 +1,4 @@
+use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use std::fmt;
 extern crate sdl2;
@@ -8,7 +9,13 @@ use sdl2::pixels::Color;
 
 use rayon::prelude::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
+enum State {
+    Visited,
+    Unvisited,
+}
+
+#[derive(Clone, Copy, PartialEq)]
 struct Node {
     x: f32,
     y: f32,
@@ -39,7 +46,13 @@ impl Node {
     }
 
     pub fn distance_to(&self, node: &Node) -> f32 {
-        (((self.x - node.x) * (self.x - node.x)) + ((self.y - node.y) * (self.y - node.y))).sqrt()
+        let res = (((self.x - node.x) * (self.x - node.x))
+            + ((self.y - node.y) * (self.y - node.y)))
+            .sqrt();
+        if res > 0.0 {
+            return res;
+        }
+        std::f32::MAX
     }
 
     ///See: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
@@ -97,16 +110,20 @@ impl Node {
             ) {
                 intersections += 1;
             }
-            i += 2;
+            i += 1;
         }
         intersections
     }
 
+    /// or something
     pub fn tsp_2opt(nodes: Vec<Node>) -> Vec<Node> {
         let mut reses: Vec<Node> = nodes.to_vec();
         let mut crossed: bool = true;
         let mut i: usize = 0;
-        while crossed {
+        let mut start_val = Node::calc_path(&reses);
+        let mut sum = 0.0;
+        println!("current path_len {}", Node::calc_path(&nodes));
+        while i < nodes.len() {
             if nodes[i].line_intersect(
                 nodes[(i + 1).rem_euclid(nodes.len())],
                 nodes[(i + 2).rem_euclid(nodes.len())],
@@ -116,27 +133,82 @@ impl Node {
                     (i + 1).rem_euclid(nodes.len()),
                     (i + 3).rem_euclid(nodes.len()),
                 );
-                println!(
-                    "Swapped {}:{}, {}:{}",
-                    (i + 1).rem_euclid(nodes.len()),
-                    nodes[(i + 1).rem_euclid(nodes.len())],
-                    (i + 3).rem_euclid(nodes.len()),
-                    nodes[(i + 3).rem_euclid(nodes.len())]
-                );
             }
-            i += 2;
-            i = i.rem_euclid(reses.len());
-            let intersections = Node::check_intersections(&reses);
-            if intersections < 1000 {
-                crossed = false;
-            }
-            println!("intersections {}", intersections);
+            i += 1;
+            println!("current path_len {}", Node::calc_path(&reses));
+            // i = i.rem_euclid(reses.len());
+            // let intersections = Node::check_intersections(&reses);
+            // if intersections < 1 {
+            //     crossed = false;
+            // }
+            // println!("intersections {}", intersections);
+            let tmp = Node::calc_path(&reses);
+            sum += tmp - start_val;
+            start_val = tmp;
+            println!("{}", sum);
         }
+        println!("{}", sum / (sum + start_val));
         reses
     }
 
+    fn choose_next_node(self, nodes: &mut [(State, Node)], weights: &mut [i32]) -> usize {
+        let new_weights: Vec<f32> = weights
+            .par_iter()
+            .zip(nodes.par_iter())
+            .map(|(weight, node)| *weight as f32 / self.distance_to(&node.1))
+            .collect();
+        let dist = WeightedIndex::new(&new_weights).unwrap();
+        println!("{:?}", new_weights);
+        let mut rng = thread_rng();
+        let mut index = dist.sample(&mut rng);
+        let mut choice = nodes[index];
+        while choice.0 == State::Visited || self == choice.1 {
+            index = dist.sample(&mut rng);
+            choice = nodes[index];
+        }
+        nodes[index].0 = State::Visited;
+        weights[index] += 1;
+        // println!("{} -> {}", self, nodes[index].1);
+        index
+    }
+
+    pub fn tsp_ant(nodes: &[Node]) -> Vec<Node> {
+        let start_val = Node::calc_path(&nodes);
+        let mut weights: Vec<Vec<i32>> = (0..nodes.len() - 1).map(|_| vec![1; nodes.len()]).collect();
+        let mut tmp: Vec<(State, Node)> = nodes
+            .par_iter()
+            .map(|node| (State::Unvisited, node.clone()))
+            .collect();
+        let mut test: Vec<usize> = (0..tmp.len() - 1)
+            .into_iter()
+            .map(|i| tmp[i].1.choose_next_node(&mut tmp, &mut weights[i]))
+            .collect();
+        for i in 0..64000 {
+            tmp = tmp
+                .par_iter()
+                .map(|node| (State::Unvisited, node.1))
+                .collect();
+            test = (0..tmp.len() - 1)
+                .into_iter()
+                .map(|i| tmp[i].1.choose_next_node(&mut tmp, &mut weights[i]))
+                .collect();
+            println!("{}", i);
+        }
+        tmp = tmp
+            .par_iter()
+            .map(|node| (State::Unvisited, node.1))
+            .collect();
+        test = (0..tmp.len() - 1)
+            .into_iter()
+            .map(|i| tmp[i].1.choose_next_node(&mut tmp, &mut weights[i]))
+            .collect();
+        let mut res: Vec<Node> = test.iter().map(|i| nodes[*i]).collect();
+        println!("{} {}", start_val, Node::calc_path(&res));
+        res
+    }
+
     /// Traveling salesman problem next nearest neighbour
-    pub fn tsp_nnn(nodes: Vec<Node>) -> Vec<Node> {
+    pub fn tsp_nnn(nodes: &[Node]) -> Vec<Node> {
         let reses: Vec<Vec<Node>> = (0..nodes.len())
             .into_par_iter()
             .map(|i| {
@@ -206,8 +278,8 @@ fn main() {
 
     //setting up and solving rand nodes
     let nodes_unord = Node::create_rand_nodes(8, 10.0, 1590.0, 10.0, 990.0);
-    let nodes = Node::tsp_nnn(nodes_unord);
-    // let nodes = Node::tsp_2opt(nodes_nnn);
+    // let nodes = Node::tsp_nnn(&nodes_unord);
+    let nodes = Node::tsp_ant(&nodes_unord);
 
     //setting up sdl
     let sdl_context = sdl2::init().unwrap();
