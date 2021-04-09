@@ -151,59 +151,57 @@ impl Node {
         reses
     }
 
-    fn choose_next_node(self, nodes: &mut [(State, Node)], weights: &mut [i32]) -> usize {
+    fn choose_next_node(i: usize, nodes: &mut [(State, Node)], weights: &mut [i32]) -> usize {
         let new_weights: Vec<f32> = weights
             .par_iter()
             .zip(nodes.par_iter())
-            .map(|(weight, node)| *weight as f32 / self.distance_to(&node.1))
+            .map(|(weight, node)| {
+                *weight as f32 * (-nodes[i].1.distance_to(&node.1) / 150.0).exp()
+            })
             .collect();
         let dist = WeightedIndex::new(&new_weights).unwrap();
-        println!("{:?}", new_weights);
         let mut rng = thread_rng();
         let mut index = dist.sample(&mut rng);
         let mut choice = nodes[index];
-        while choice.0 == State::Visited || self == choice.1 {
+        while choice.0 == State::Visited || i == index {
+            // println!("{} is visited retrying", index);
             index = dist.sample(&mut rng);
             choice = nodes[index];
         }
         nodes[index].0 = State::Visited;
         weights[index] += 1;
-        // println!("{} -> {}", self, nodes[index].1);
+        // println!("{:?}, {:?}, {} -> {}", weights, new_weights, i, index);
+        println!("{} -> {}", i, index);
         index
     }
 
+    //TODO: refactor
     pub fn tsp_ant(nodes: &[Node]) -> Vec<Node> {
         let start_val = Node::calc_path(&nodes);
-        let mut weights: Vec<Vec<i32>> = (0..nodes.len() - 1).map(|_| vec![1; nodes.len()]).collect();
-        let mut tmp: Vec<(State, Node)> = nodes
-            .par_iter()
-            .map(|node| (State::Unvisited, node.clone()))
-            .collect();
-        let mut test: Vec<usize> = (0..tmp.len() - 1)
-            .into_iter()
-            .map(|i| tmp[i].1.choose_next_node(&mut tmp, &mut weights[i]))
-            .collect();
-        for i in 0..64000 {
-            tmp = tmp
+        let mut weights: Vec<Vec<i32>> = (0..nodes.len()).map(|_| vec![1; nodes.len()]).collect();
+        let mut indexes: Vec<usize> = Vec::new();
+        for _ in 0..1024 {
+            let mut tmp: Vec<(State, Node)> = nodes
                 .par_iter()
-                .map(|node| (State::Unvisited, node.1))
+                .map(|node| (State::Unvisited, node.clone()))
                 .collect();
-            test = (0..tmp.len() - 1)
-                .into_iter()
-                .map(|i| tmp[i].1.choose_next_node(&mut tmp, &mut weights[i]))
-                .collect();
-            println!("{}", i);
+            let mut index = 0;
+            let mut all_visited = false;
+            indexes = Vec::new();
+            while !all_visited {
+                index = Node::choose_next_node(index, &mut tmp, &mut weights[index]);
+                indexes.push(index);
+                all_visited = true;
+                for node in &tmp {
+                    if node.0 == State::Unvisited {
+                        all_visited = false;
+                        break;
+                    }
+                }
+            }
         }
-        tmp = tmp
-            .par_iter()
-            .map(|node| (State::Unvisited, node.1))
-            .collect();
-        test = (0..tmp.len() - 1)
-            .into_iter()
-            .map(|i| tmp[i].1.choose_next_node(&mut tmp, &mut weights[i]))
-            .collect();
-        let mut res: Vec<Node> = test.iter().map(|i| nodes[*i]).collect();
-        println!("{} {}", start_val, Node::calc_path(&res));
+        let res: Vec<Node> = indexes.par_iter().map(|i| nodes[*i]).collect();
+        println!("{} -> {}", start_val, Node::calc_path(&res));
         res
     }
 
@@ -277,9 +275,10 @@ fn main() {
     );
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(8, 10.0, 1590.0, 10.0, 990.0);
-    // let nodes = Node::tsp_nnn(&nodes_unord);
+    let nodes_unord = Node::create_rand_nodes(32, 10.0, 1590.0, 10.0, 990.0);
+    // let nodes_nnn = Node::tsp_nnn(&nodes_unord);
     let nodes = Node::tsp_ant(&nodes_unord);
+    println!("{}, {}", nodes_unord.len(), nodes.len());
 
     //setting up sdl
     let sdl_context = sdl2::init().unwrap();
