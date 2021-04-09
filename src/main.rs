@@ -119,7 +119,6 @@ impl Node {
     /// or something
     pub fn tsp_2opt(nodes: Vec<Node>) -> Vec<Node> {
         let mut reses: Vec<Node> = nodes.to_vec();
-        let mut crossed: bool = true;
         let mut i: usize = 0;
         let mut start_val = Node::calc_path(&reses);
         let mut sum = 0.0;
@@ -157,7 +156,11 @@ impl Node {
             .par_iter()
             .zip(nodes.par_iter())
             .map(|(weight, node)| {
-                *weight as f32 * (-nodes[i].1.distance_to(&node.1) / 200.0).exp()
+                if node.0 == State::Unvisited {
+                    *weight as f32 * (-nodes[i].1.distance_to(&node.1) / 100.0).exp()
+                } else {
+                    0.0
+                }
             })
             .collect();
         let dist = WeightedIndex::new(&new_weights).unwrap();
@@ -280,8 +283,8 @@ fn main() {
 
     //setting up and solving rand nodes
     let nodes_unord = Node::create_rand_nodes(128, 10.0, 1590.0, 10.0, 990.0);
-    let nodes_nnn = Node::tsp_nnn(&nodes_unord);
-    let nodes = Node::tsp_ant(&nodes_nnn);
+    // let nodes_nnn = Node::tsp_nnn(&nodes_unord);
+    let nodes = Node::tsp_ant(&nodes_unord);
     println!("{}, {}", nodes_unord.len(), nodes.len());
 
     //setting up sdl
