@@ -151,13 +151,12 @@ impl Node {
         reses
     }
 
-    fn choose_next_node(i: usize, nodes: &mut [(State, Node)], weights: &mut [i32]) -> usize {
-        let new_weights: Vec<f32> = weights
-            .par_iter()
-            .zip(nodes.par_iter())
-            .map(|(weight, node)| {
-                if node.0 == State::Unvisited {
-                    *weight as f32 * (-nodes[i].1.distance_to(&node.1) / 100.0).exp()
+    fn choose_next_node(idx: usize, nodes: &mut [(State, Node)], weights: &mut [i32]) -> usize {
+        let new_weights: Vec<f32> = (0..weights.len())
+            .into_iter()
+            .map(|i| {
+                if nodes[i].0 == State::Unvisited {
+                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 50.0).exp()
                 } else {
                     0.0
                 }
@@ -167,15 +166,16 @@ impl Node {
         let mut rng = thread_rng();
         let mut index = dist.sample(&mut rng);
         let mut choice = nodes[index];
-        while choice.0 == State::Visited || i == index {
-            // println!("{} is visited retrying", index);
+        //to prevent visiting self
+        while idx == index {
+            println!("{} is visited retrying", index);
             index = dist.sample(&mut rng);
             choice = nodes[index];
         }
         nodes[index].0 = State::Visited;
         weights[index] += 1;
         // println!("{:?}, {:?}, {} -> {}", weights, new_weights, i, index);
-        println!("{} -> {}", i, index);
+        // println!("{} -> {}", i, index);
         index
     }
 
@@ -184,7 +184,7 @@ impl Node {
         let start_val = Node::calc_path(&nodes);
         let mut weights: Vec<Vec<i32>> = (0..nodes.len()).map(|_| vec![1; nodes.len()]).collect();
         let mut indexes: Vec<usize> = Vec::new();
-        for iter in 0..4096 {
+        for iter in 0..8192 {
             let mut tmp: Vec<(State, Node)> = nodes
                 .par_iter()
                 .map(|node| (State::Unvisited, node.clone()))
@@ -282,7 +282,7 @@ fn main() {
     );
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(128, 10.0, 1590.0, 10.0, 990.0);
+    let nodes_unord = Node::create_rand_nodes(1024, 10.0, 1590.0, 10.0, 990.0);
     // let nodes_nnn = Node::tsp_nnn(&nodes_unord);
     let nodes = Node::tsp_ant(&nodes_unord);
     println!("{}, {}", nodes_unord.len(), nodes.len());
