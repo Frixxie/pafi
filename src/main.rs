@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use std::fmt;
@@ -156,7 +157,7 @@ impl Node {
             .par_iter()
             .zip(nodes.par_iter())
             .map(|(weight, node)| {
-                *weight as f32 * (-nodes[i].1.distance_to(&node.1) / 150.0).exp()
+                *weight as f32 * (-nodes[i].1.distance_to(&node.1) / 200.0).exp()
             })
             .collect();
         let dist = WeightedIndex::new(&new_weights).unwrap();
@@ -180,13 +181,14 @@ impl Node {
         let start_val = Node::calc_path(&nodes);
         let mut weights: Vec<Vec<i32>> = (0..nodes.len()).map(|_| vec![1; nodes.len()]).collect();
         let mut indexes: Vec<usize> = Vec::new();
-        for _ in 0..1024 {
+        for iter in 0..4096 {
             let mut tmp: Vec<(State, Node)> = nodes
                 .par_iter()
                 .map(|node| (State::Unvisited, node.clone()))
                 .collect();
             let mut index = 0;
             let mut all_visited = false;
+            tmp[0].0 = State::Visited;
             indexes = Vec::new();
             while !all_visited {
                 index = Node::choose_next_node(index, &mut tmp, &mut weights[index]);
@@ -199,8 +201,10 @@ impl Node {
                     }
                 }
             }
+            println!("Iteration {} done", iter + 1)
         }
-        let res: Vec<Node> = indexes.par_iter().map(|i| nodes[*i]).collect();
+        let mut res: Vec<Node> = indexes.par_iter().map(|i| nodes[*i]).collect();
+        res.insert(0, nodes[0]);
         println!("{} -> {}", start_val, Node::calc_path(&res));
         res
     }
@@ -275,9 +279,9 @@ fn main() {
     );
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(32, 10.0, 1590.0, 10.0, 990.0);
-    // let nodes_nnn = Node::tsp_nnn(&nodes_unord);
-    let nodes = Node::tsp_ant(&nodes_unord);
+    let nodes_unord = Node::create_rand_nodes(128, 10.0, 1590.0, 10.0, 990.0);
+    let nodes_nnn = Node::tsp_nnn(&nodes_unord);
+    let nodes = Node::tsp_ant(&nodes_nnn);
     println!("{}, {}", nodes_unord.len(), nodes.len());
 
     //setting up sdl
