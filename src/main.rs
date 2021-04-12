@@ -79,24 +79,23 @@ impl Node {
         )
     }
 
-    pub fn create_rand_nodes(
-        n: usize,
+    pub fn create_rand_nodes<const N: usize>(
         min_x: f32,
         max_x: f32,
         min_y: f32,
         max_y: f32,
     ) -> Vec<Node> {
-        (0..n)
+        (0..N)
             .into_par_iter()
             .map(|_| Node::rand_new(min_x, max_x, min_y, max_y))
             .collect()
     }
 
-    pub fn calc_path(nodes: &[Node]) -> f32 {
+    pub fn calc_path(nodes: &[Node], n: usize) -> f32 {
         nodes
             .par_iter()
             .enumerate()
-            .map(|(i, node)| node.distance_to(&nodes[(i + 1).rem_euclid(nodes.len())]))
+            .map(|(i, node)| node.distance_to(&nodes[(i + 1).rem_euclid(n)]))
             .sum()
     }
 
@@ -120,9 +119,9 @@ impl Node {
     pub fn tsp_2opt(nodes: Vec<Node>) -> Vec<Node> {
         let mut reses: Vec<Node> = nodes.to_vec();
         let mut i: usize = 0;
-        let mut start_val = Node::calc_path(&reses);
+        let mut start_val = Node::calc_path(&reses, reses.len());
         let mut sum = 0.0;
-        println!("current path_len {}", Node::calc_path(&nodes));
+        println!("current path_len {}", Node::calc_path(&nodes, reses.len()));
         while i < nodes.len() {
             if nodes[i].line_intersect(
                 nodes[(i + 1).rem_euclid(nodes.len())],
@@ -135,14 +134,14 @@ impl Node {
                 );
             }
             i += 1;
-            println!("current path_len {}", Node::calc_path(&reses));
+            println!("current path_len {}", Node::calc_path(&reses, reses.len()));
             // i = i.rem_euclid(reses.len());
             // let intersections = Node::check_intersections(&reses);
             // if intersections < 1 {
             //     crossed = false;
             // }
             // println!("intersections {}", intersections);
-            let tmp = Node::calc_path(&reses);
+            let tmp = Node::calc_path(&reses, reses.len());
             sum += tmp - start_val;
             start_val = tmp;
             println!("{}", sum);
@@ -156,7 +155,7 @@ impl Node {
             .into_iter()
             .map(|i| {
                 if nodes[i].0 == State::Unvisited {
-                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 50.0).exp()
+                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 25.0).exp()
                 } else {
                     0.0
                 }
@@ -172,15 +171,14 @@ impl Node {
         }
         nodes[index].0 = State::Visited;
         weights[index] += 1;
-        // println!("{:?}, {:?}, {} -> {}", weights, new_weights, i, index);
-        // println!("{} -> {}", i, index);
+        // println!("{:?}, {:?}, {} -> {}", weights, new_weights, idx, index);
+        // println!("{} -> {}", idx, index);
         index
     }
 
     //TODO: refactor
-    pub fn tsp_ant<const NUM_NODES: usize>(nodes: &[Node]) -> Vec<Node> {
-        let start_val = Node::calc_path(&nodes);
-        // let mut weights: Vec<Vec<i32>> = (0..nodes.len()).map(|_| vec![1; nodes.len()]).collect();
+    pub fn tsp_aco<const NUM_NODES: usize>(nodes: &[Node]) -> Vec<Node> {
+        let start_val = Node::calc_path(&nodes, nodes.len());
         let mut weights: [[i32; NUM_NODES]; NUM_NODES] = [[1; NUM_NODES]; NUM_NODES];
         let mut indexes: Vec<usize> = Vec::new();
         for iter in 0..1024 {
@@ -207,7 +205,7 @@ impl Node {
         }
         let mut res: Vec<Node> = indexes.par_iter().map(|i| nodes[*i]).collect();
         res.insert(0, nodes[0]);
-        println!("{} -> {}", start_val, Node::calc_path(&res));
+        println!("{} -> {}", start_val, Node::calc_path(&res, nodes.len()));
         res
     }
 
@@ -238,7 +236,7 @@ impl Node {
             .collect();
         let paths_len: Vec<f32> = reses
             .par_iter()
-            .map(|nodes| Node::calc_path(nodes))
+            .map(|nodes| Node::calc_path(nodes, nodes.len()))
             .collect();
 
         let mut min: f32 = std::f32::INFINITY;
@@ -255,7 +253,7 @@ impl Node {
             min_i,
             reses
                 .par_iter()
-                .map(|nodes| Node::calc_path(nodes))
+                .map(|nodes| Node::calc_path(nodes, nodes.len()))
                 .sum::<f32>()
                 / paths_len.len() as f32
         );
@@ -280,12 +278,12 @@ fn main() {
         node_1.distance_to(&node_2)
     );
 
-    const NUM_NODES: usize = 32;
+    const NUM_NODES: usize = 1024;
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(NUM_NODES, 10.0, 1590.0, 10.0, 990.0);
+    let nodes_unord = Node::create_rand_nodes::<NUM_NODES>(10.0, 1590.0, 10.0, 990.0);
     // let nodes_nnn = Node::tsp_nnn(&nodes_unord);
-    let nodes = Node::tsp_ant::<NUM_NODES>(&nodes_unord);
+    let nodes = Node::tsp_aco::<NUM_NODES>(&nodes_unord);
     println!("{}, {}", nodes_unord.len(), nodes.len());
 
     //setting up sdl
