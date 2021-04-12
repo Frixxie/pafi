@@ -165,12 +165,10 @@ impl Node {
         let dist = WeightedIndex::new(&new_weights).unwrap();
         let mut rng = thread_rng();
         let mut index = dist.sample(&mut rng);
-        let mut choice = nodes[index];
         //to prevent visiting self
         while idx == index {
             println!("{} is visited retrying", index);
             index = dist.sample(&mut rng);
-            choice = nodes[index];
         }
         nodes[index].0 = State::Visited;
         weights[index] += 1;
@@ -180,11 +178,12 @@ impl Node {
     }
 
     //TODO: refactor
-    pub fn tsp_ant(nodes: &[Node]) -> Vec<Node> {
+    pub fn tsp_ant<const NUM_NODES: usize>(nodes: &[Node]) -> Vec<Node> {
         let start_val = Node::calc_path(&nodes);
-        let mut weights: Vec<Vec<i32>> = (0..nodes.len()).map(|_| vec![1; nodes.len()]).collect();
+        // let mut weights: Vec<Vec<i32>> = (0..nodes.len()).map(|_| vec![1; nodes.len()]).collect();
+        let mut weights: [[i32; NUM_NODES]; NUM_NODES] = [[1; NUM_NODES]; NUM_NODES];
         let mut indexes: Vec<usize> = Vec::new();
-        for iter in 0..8192 {
+        for iter in 0..1024 {
             let mut tmp: Vec<(State, Node)> = nodes
                 .par_iter()
                 .map(|node| (State::Unvisited, node.clone()))
@@ -281,10 +280,12 @@ fn main() {
         node_1.distance_to(&node_2)
     );
 
+    const NUM_NODES: usize = 32;
+
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes(1024, 10.0, 1590.0, 10.0, 990.0);
+    let nodes_unord = Node::create_rand_nodes(NUM_NODES, 10.0, 1590.0, 10.0, 990.0);
     // let nodes_nnn = Node::tsp_nnn(&nodes_unord);
-    let nodes = Node::tsp_ant(&nodes_unord);
+    let nodes = Node::tsp_ant::<NUM_NODES>(&nodes_unord);
     println!("{}, {}", nodes_unord.len(), nodes.len());
 
     //setting up sdl
