@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install
-      run: sudo apt install libsdl2-dev
+      run: sudo apt install --fix-missing -y libsdl2-dev
     - name: Build
       run: cargo build --verbose
     - name: Run tests
