@@ -56,8 +56,8 @@ impl Node {
         std::f32::MAX
     }
 
-    ///See: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
-    ///For explaination on how this works
+    /// See: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
+    /// For explaination on how this works
     pub fn line_intersect(&self, p2: Node, p3: Node, p4: Node) -> bool {
         // let d = ((self.x - p2.x) * (p3.y - p4.y)) - ((self.y - p2.y) * (p3.x - p4.x));
         let d = ((self.x - p2.x) * (p3.y - p4.y)) - ((self.y - p2.y) * (p3.x - p4.x));
@@ -67,9 +67,9 @@ impl Node {
         let t = ((self.x - p3.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x)) / d;
         let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p3.x)) / d;
         println!("{}, {}", t, u);
-        if t >= 0.0 && t <= 1.0 {
+        if t > 0.0 && t < 1.0 {
             return true;
-        } else if u >= 0.0 && u <= 1.0 {
+        } else if u > 0.0 && u < 1.0 {
             return true;
         }
         false
@@ -77,7 +77,9 @@ impl Node {
 
     pub fn intersect_point(&self, p2: Node, p3: Node, p4: Node) -> Node {
         let d = ((self.x - p2.x) * (p3.y - p4.y)) - ((self.y - p2.y) * (p3.x - p4.x));
-
+        if d == 0.0 {
+            return Node::new(0.0, 0.0);
+        }
         let p1x = (self.x * p2.y - self.y * p2.x) * (p3.x - p4.x);
         let p2x = (self.x - p2.x) * (p3.x * p4.y - p3.y * p4.x);
         let px = (p1x - p2x) / d;
@@ -220,10 +222,10 @@ impl Node {
         index
     }
 
-    //TODO: refactor
+    //TODO: refactor and use better algorithm for this
     pub fn tsp_aco<const NUM_NODES: usize>(nodes: &[Node]) -> Vec<Node> {
         let start_val = Node::calc_path(&nodes, nodes.len());
-        let mut weights: [[i32; NUM_NODES]; NUM_NODES] = [[1; NUM_NODES]; NUM_NODES];
+        let mut weights: Box<[[i32; NUM_NODES]; NUM_NODES]> = Box::new([[1; NUM_NODES]; NUM_NODES]);
         let mut indexes: Vec<usize> = Vec::new();
         for iter in 0..1024 {
             let mut tmp: Vec<(State, Node)> = nodes
@@ -322,7 +324,7 @@ fn main() {
         node_1.distance_to(&node_2)
     );
 
-    const NUM_NODES: usize = 32;
+    const NUM_NODES: usize = 8192;
 
     //setting up and solving rand nodes
     let nodes_unord = Node::create_rand_nodes::<NUM_NODES>(10.0, 1590.0, 10.0, 990.0);
