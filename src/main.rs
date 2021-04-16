@@ -67,9 +67,9 @@ impl Node {
         let t = ((self.x - p3.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x)) / d;
         let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p3.x)) / d;
         println!("{}, {}", t, u);
-        if t > 0.0 && t < 1.0 {
+        if t >= 0.0 && t <= 1.0 {
             return true;
-        } else if u > 0.0 && u < 1.0 {
+        } else if u >= 0.0 && u <= 1.0 {
             return true;
         }
         false
@@ -118,8 +118,18 @@ impl Node {
             .sum()
     }
 
+    /// See answer: https://stackoverflow.com/questions/11907947/how-to-check-if-a-point-lies-on-a-line-between-2-other-points
+    /// for explaination
+    pub fn is_on_line(&self, p1: Node, p2: Node) -> bool {
+        let cross = ((self.x - p1.x) * (p2.y - p1.y)) - ((self.y - p1.y) * (p2.x - p1.x));
+        // println!("{}", cross.abs());
+        if cross.abs() <= 0.001 {
+            return true;
+        }
+        false
+    }
+
     fn get_intersections(nodes: &[Node]) -> (i32, Vec<Node>) {
-        let mut intersections = 0;
         let mut i: usize = 0;
         let mut reses: Vec<Node> = Vec::new();
         while i < nodes.len() {
@@ -137,7 +147,6 @@ impl Node {
                         (j).rem_euclid(nodes.len()),
                         (j + 1).rem_euclid(nodes.len())
                     );
-                    intersections += 1;
                     reses.push(nodes[i].intersect_point(
                         nodes[(i + 1).rem_euclid(nodes.len())],
                         nodes[(j).rem_euclid(nodes.len())],
@@ -147,10 +156,25 @@ impl Node {
             }
             i += 1;
         }
-        for node in reses.iter() {
-            println!("{}", node);
+        let mut tmp = Vec::new();
+        let mut cpy = reses.to_vec();
+        while !cpy.is_empty() {
+            let node = cpy.pop().unwrap();
+            let mut instances = 0;
+            for j in 0..nodes.len() {
+                if node.is_on_line(nodes[j], nodes[(j + 1).rem_euclid(nodes.len())]) {
+                    instances += 1;
+                }
+            }
+            if instances > 1 {
+                tmp.push(node);
+            }
+            println!("{}", instances);
+            i += 1;
         }
-        (intersections, reses)
+        println!("{} -> {}", reses.len(), tmp.len());
+        // (reses.len(), reses)
+        (tmp.len() as i32, tmp)
     }
 
     /// or something
@@ -324,7 +348,7 @@ fn main() {
         node_1.distance_to(&node_2)
     );
 
-    const NUM_NODES: usize = 8192;
+    const NUM_NODES: usize = 32;
 
     //setting up and solving rand nodes
     let nodes_unord = Node::create_rand_nodes::<NUM_NODES>(10.0, 1590.0, 10.0, 990.0);
