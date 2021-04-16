@@ -16,10 +16,10 @@ enum State {
     Unvisited,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct Node {
-    x: f32,
-    y: f32,
+    x: i32,
+    y: i32,
 }
 
 impl From<Node> for sdl2::rect::Point {
@@ -34,21 +34,33 @@ impl From<&Node> for sdl2::rect::Point {
     }
 }
 
+impl From<Node> for (f32, f32) {
+    fn from(node: Node) -> (f32, f32) {
+        (node.x as f32, node.y as f32)
+    }
+}
+
+impl From<&Node> for (f32, f32) {
+    fn from(node: &Node) -> (f32, f32) {
+        (node.x as f32, node.y as f32)
+    }
+}
+
 impl Node {
-    pub fn new(x: f32, y: f32) -> Node {
+    pub fn new(x: i32, y: i32) -> Node {
         Node { x, y }
     }
 
-    pub fn rand_new(min_x: f32, max_x: f32, min_y: f32, max_y: f32) -> Node {
+    pub fn rand_new(min_x: i32, max_x: i32, min_y: i32, max_y: i32) -> Node {
         let mut rng = thread_rng();
-        let x: f32 = rng.gen_range(min_x, max_x).floor();
-        let y: f32 = rng.gen_range(min_y, max_y).floor();
+        let x: i32 = rng.gen_range(min_x, max_x);
+        let y: i32 = rng.gen_range(min_y, max_y);
         Node { x, y }
     }
 
     pub fn distance_to(&self, node: &Node) -> f32 {
-        let res = (((self.x - node.x) * (self.x - node.x))
-            + ((self.y - node.y) * (self.y - node.y)))
+        let res = ((((self.x - node.x) * (self.x - node.x))
+            + ((self.y - node.y) * (self.y - node.y))) as f32)
             .sqrt();
         if res > 0.0 {
             return res;
@@ -59,36 +71,43 @@ impl Node {
     /// See: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
     /// For explaination on how this works
     pub fn line_intersect(&self, p2: Node, p3: Node, p4: Node) -> bool {
-        // let d = ((self.x - p2.x) * (p3.y - p4.y)) - ((self.y - p2.y) * (p3.x - p4.x));
         let d = ((self.x - p2.x) * (p3.y - p4.y)) - ((self.y - p2.y) * (p3.x - p4.x));
-        if d == 0.0 {
+        if d == 0 {
             return false;
         }
-        let t = ((self.x - p3.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x)) / d;
-        let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p3.x)) / d;
+        let t =
+            ((self.x - p3.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x)) as f32 / d as f32;
+        let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p3.x)) as f32
+            / d as f32;
         println!("{}, {}", t, u);
-        if t >= 0.0 && t <= 1.0 {
+        if t > 0.0 && t < 1.0 {
             return true;
-        } else if u >= 0.0 && u <= 1.0 {
+        } else if u > 0.0 && u < 1.0 {
             return true;
         }
         false
     }
 
-    pub fn intersect_point(&self, p2: Node, p3: Node, p4: Node) -> Node {
+    pub fn intersect_point(&self, p2: Node, p3: Node, p4: Node) -> (f32, f32) {
         let d = ((self.x - p2.x) * (p3.y - p4.y)) - ((self.y - p2.y) * (p3.x - p4.x));
-        if d == 0.0 {
-            return Node::new(0.0, 0.0);
+        if d == 0 {
+            return (0.0, 0.0);
         }
-        let t = ((self.x - p3.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x)) / d;
-        let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p3.x)) / d;
+        let t =
+            ((self.x - p3.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x)) as f32 / d as f32;
+        let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p3.x)) as f32
+            / d as f32;
         println!("{}, {}", t, u);
         if t >= 0.0 && t <= 1.0 {
-            return Node::new(self.x + t * (p2.x - self.x), self.y + t * (p2.y - self.y));
+            let x = self.x as f32 + t * (p2.x - self.x) as f32;
+            let y = self.y as f32 + t * (p2.y - self.y) as f32;
+            return (x, y);
         } else if u >= 0.0 && u <= 1.0 {
-            return Node::new(p3.x + u * (p4.x - p3.x), p3.y + u * (p4.y - p3.y));
+            let x = p3.x as f32 + u * (p4.x - p3.x) as f32;
+            let y = p3.y as f32 + u * (p4.y - p3.y) as f32;
+            return (x, y);
         }
-        Node::new(0.0, 0.0)
+        return (0.0, 0.0);
     }
 
     pub fn into_rect(&self, w: i32, h: i32) -> sdl2::rect::Rect {
@@ -101,10 +120,10 @@ impl Node {
     }
 
     pub fn create_rand_nodes<const N: usize>(
-        min_x: f32,
-        max_x: f32,
-        min_y: f32,
-        max_y: f32,
+        min_x: i32,
+        max_x: i32,
+        min_y: i32,
+        max_y: i32,
     ) -> Vec<Node> {
         (0..N)
             .into_par_iter()
@@ -122,9 +141,9 @@ impl Node {
 
     /// See answer: https://stackoverflow.com/questions/11907947/how-to-check-if-a-point-lies-on-a-line-between-2-other-points
     /// for explaination
-    pub fn is_on_line(&self, p1: Node, p2: Node) -> bool {
-        let cross = ((self.x - p1.x) * (p2.y - p1.y)) - ((self.y - p1.y) * (p2.x - p1.x));
-        // println!("{}", cross.abs());
+    pub fn is_on_line(p0: (f32, f32), p1: (f32, f32), p2: (f32, f32)) -> bool {
+        // 0 -> x and 1 -> y
+        let cross = ((p0.0 - p1.0) * (p2.1 - p1.1)) - ((p0.1 - p1.1) * (p2.0 - p1.0));
         if cross.abs() == 0.0 {
             return true;
         }
@@ -133,7 +152,7 @@ impl Node {
 
     fn get_intersections(nodes: &[Node]) -> (i32, Vec<Node>) {
         let mut i: usize = 0;
-        let mut reses: Vec<Node> = Vec::new();
+        let mut reses: Vec<(f32, f32)> = Vec::new();
         while i < nodes.len() {
             for j in i + 2..nodes.len() + i {
                 println!("{} ,{}", i, j.rem_euclid(nodes.len()));
@@ -149,11 +168,12 @@ impl Node {
                         (j).rem_euclid(nodes.len()),
                         (j + 1).rem_euclid(nodes.len())
                     );
-                    reses.push(nodes[i].intersect_point(
+                    let res = nodes[i].intersect_point(
                         nodes[(i + 1).rem_euclid(nodes.len())],
                         nodes[(j).rem_euclid(nodes.len())],
                         nodes[(j + 1).rem_euclid(nodes.len())],
-                    ))
+                    );
+                    reses.push(res);
                 }
             }
             i += 1;
@@ -164,20 +184,33 @@ impl Node {
             let node = cpy.pop().unwrap();
             let mut instances = 0;
             for j in 0..nodes.len() {
-                if node.is_on_line(nodes[j], nodes[(j + 1).rem_euclid(nodes.len())]) {
+                if Node::is_on_line(
+                    node,
+                    nodes[j].into(),
+                    nodes[(j + 1).rem_euclid(nodes.len())].into(),
+                ) {
                     instances += 1;
-                    println!("Node {} is on line {} -> {}", node, j, (j + 1).rem_euclid(nodes.len()));
+                    println!(
+                        "Node ({},{}) is on line {} -> {}",
+                        node.0,
+                        node.1,
+                        j,
+                        (j + 1).rem_euclid(nodes.len())
+                    );
                 }
             }
-            if instances > 0 {
+            if instances > 1 {
                 tmp.push(node);
             }
             println!("{}", instances);
             i += 1;
         }
         println!("{} -> {}", reses.len(), tmp.len());
-        (reses.len() as i32, reses)
-        // (tmp.len() as i32, tmp)
+        // (reses.len() as i32, reses)
+        let mut res: Vec<Node> = tmp.iter().map(|node| Node::new(node.0.floor() as i32, node.1.floor() as i32)).collect();
+        res.sort();
+        res.dedup();
+        (res.len() as i32, res)
     }
 
     /// or something
@@ -342,8 +375,8 @@ impl fmt::Display for Node {
 
 fn main() {
     //demo of using distance_to
-    let node_1 = Node::new(400.0, 300.0);
-    let node_2 = Node::new(0.0, 2.0);
+    let node_1 = Node::new(400, 300);
+    let node_2 = Node::new(0, 2);
     println!(
         "{} distance_to {}, {}",
         node_1,
@@ -354,12 +387,17 @@ fn main() {
     const NUM_NODES: usize = 32;
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes::<NUM_NODES>(10.0, 1590.0, 10.0, 990.0);
+    let nodes_unord = Node::create_rand_nodes::<NUM_NODES>(10, 1590, 10, 990);
     let nodes_nnn = Node::tsp_nnn(&nodes_unord);
     let nodes = Node::tsp_aco::<NUM_NODES>(&nodes_nnn);
     let intersections = Node::get_intersections(&nodes);
     println!("Intersections {}", intersections.0);
     // let nodes = Node::tsp_2opt(&nodes_aco);
+    //
+
+    for node in intersections.1.iter() {
+        println!("{}", node);
+    }
 
     println!("{}, {}", nodes_unord.len(), nodes.len());
 
@@ -398,15 +436,6 @@ fn main() {
             canvas.draw_rect(node.into_rect(8, 8)).unwrap();
         }
 
-        // for node in nodes.iter() {
-        //     canvas.set_draw_color(Color::RGB(255, 255, 255));
-        //     for j in 0..nodes.len() {
-        //         canvas
-        //             .draw_line(node, nodes[(j).rem_euclid(nodes.len())])
-        //             .unwrap();
-        //     }
-        // }
-
         //drawing nodes
         canvas.set_draw_color(Color::RGB(255, 100, 55));
         for (i, node) in nodes.iter().enumerate() {
@@ -416,7 +445,7 @@ fn main() {
         }
 
         for (i, node) in nodes.iter().enumerate() {
-            canvas.set_draw_color(Color::RGB(255, (100 * i.rem_euclid(255)) as u8, 55));
+            canvas.set_draw_color(Color::RGB(255, (100 + i.rem_euclid(255)) as u8, 55 + i.rem_euclid(255) as u8));
             canvas.draw_rect(node.into_rect(8, 8)).unwrap();
         }
 
