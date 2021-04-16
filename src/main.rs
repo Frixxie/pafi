@@ -80,13 +80,15 @@ impl Node {
         if d == 0.0 {
             return Node::new(0.0, 0.0);
         }
-        let p1x = (self.x * p2.y - self.y * p2.x) * (p3.x - p4.x);
-        let p2x = (self.x - p2.x) * (p3.x * p4.y - p3.y * p4.x);
-        let px = (p1x - p2x) / d;
-        let p1y = (self.x * p2.y - self.y * p2.x) * (p3.y - p4.y);
-        let p2y = (self.y - p2.y) * (p3.x * p4.y - p3.y * p4.x);
-        let py = (p1y - p2y) / d;
-        Node::new(px, py)
+        let t = ((self.x - p3.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x)) / d;
+        let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p3.x)) / d;
+        println!("{}, {}", t, u);
+        if t >= 0.0 && t <= 1.0 {
+            return Node::new(self.x + t * (p2.x - self.x), self.y + t * (p2.y - self.y));
+        } else if u >= 0.0 && u <= 1.0 {
+            return Node::new(p3.x + u * (p4.x - p3.x), p3.y + u * (p4.y - p3.y));
+        }
+        Node::new(0.0, 0.0)
     }
 
     pub fn into_rect(&self, w: i32, h: i32) -> sdl2::rect::Rect {
@@ -123,7 +125,7 @@ impl Node {
     pub fn is_on_line(&self, p1: Node, p2: Node) -> bool {
         let cross = ((self.x - p1.x) * (p2.y - p1.y)) - ((self.y - p1.y) * (p2.x - p1.x));
         // println!("{}", cross.abs());
-        if cross.abs() <= 0.001 {
+        if cross.abs() == 0.0 {
             return true;
         }
         false
@@ -164,17 +166,18 @@ impl Node {
             for j in 0..nodes.len() {
                 if node.is_on_line(nodes[j], nodes[(j + 1).rem_euclid(nodes.len())]) {
                     instances += 1;
+                    println!("Node {} is on line {} -> {}", node, j, (j + 1).rem_euclid(nodes.len()));
                 }
             }
-            if instances > 1 {
+            if instances > 0 {
                 tmp.push(node);
             }
             println!("{}", instances);
             i += 1;
         }
         println!("{} -> {}", reses.len(), tmp.len());
-        // (reses.len(), reses)
-        (tmp.len() as i32, tmp)
+        (reses.len() as i32, reses)
+        // (tmp.len() as i32, tmp)
     }
 
     /// or something
