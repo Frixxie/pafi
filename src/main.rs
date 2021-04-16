@@ -80,9 +80,9 @@ impl Node {
         let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p3.x)) as f32
             / d as f32;
         println!("{}, {}", t, u);
-        if t > 0.0 && t < 1.0 {
+        if t >= 0.0 && t <= 1.0 {
             return true;
-        } else if u > 0.0 && u < 1.0 {
+        } else if u >= 0.0 && u <= 1.0 {
             return true;
         }
         false
@@ -144,7 +144,7 @@ impl Node {
     pub fn is_on_line(p0: (f32, f32), p1: (f32, f32), p2: (f32, f32)) -> bool {
         // 0 -> x and 1 -> y
         let cross = ((p0.0 - p1.0) * (p2.1 - p1.1)) - ((p0.1 - p1.1) * (p2.0 - p1.0));
-        if cross.abs() == 0.0 {
+        if cross.abs() < 0.05 {
             return true;
         }
         false
@@ -206,8 +206,10 @@ impl Node {
             i += 1;
         }
         println!("{} -> {}", reses.len(), tmp.len());
-        // (reses.len() as i32, reses)
-        let mut res: Vec<Node> = tmp.iter().map(|node| Node::new(node.0.floor() as i32, node.1.floor() as i32)).collect();
+        let mut res: Vec<Node> = tmp
+            .par_iter()
+            .map(|node| Node::new(node.0.floor() as i32, node.1.floor() as i32))
+            .collect();
         res.sort();
         res.dedup();
         (res.len() as i32, res)
@@ -261,7 +263,7 @@ impl Node {
             .into_iter()
             .map(|i| {
                 if nodes[i].0 == State::Unvisited {
-                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 50.0).exp()
+                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 25.0).exp()
                 } else {
                     0.0
                 }
@@ -384,7 +386,7 @@ fn main() {
         node_1.distance_to(&node_2)
     );
 
-    const NUM_NODES: usize = 32;
+    const NUM_NODES: usize = 256;
 
     //setting up and solving rand nodes
     let nodes_unord = Node::create_rand_nodes::<NUM_NODES>(10, 1590, 10, 990);
@@ -445,7 +447,11 @@ fn main() {
         }
 
         for (i, node) in nodes.iter().enumerate() {
-            canvas.set_draw_color(Color::RGB(255, (100 + i.rem_euclid(255)) as u8, 55 + i.rem_euclid(255) as u8));
+            canvas.set_draw_color(Color::RGB(
+                255,
+                (100 + i.rem_euclid(255)) as u8,
+                55 + i.rem_euclid(255) as u8,
+            ));
             canvas.draw_rect(node.into_rect(8, 8)).unwrap();
         }
 
