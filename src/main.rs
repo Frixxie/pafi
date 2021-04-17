@@ -79,7 +79,6 @@ impl Node {
             ((self.x - p3.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x)) as f32 / d as f32;
         let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p3.x)) as f32
             / d as f32;
-        println!("{}, {}", t, u);
         if t >= 0.0 && t <= 1.0 {
             return true;
         } else if u >= 0.0 && u <= 1.0 {
@@ -97,7 +96,6 @@ impl Node {
             ((self.x - p3.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x)) as f32 / d as f32;
         let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p3.x)) as f32
             / d as f32;
-        println!("{}, {}", t, u);
         if t >= 0.0 && t <= 1.0 {
             let x = self.x as f32 + t * (p2.x - self.x) as f32;
             let y = self.y as f32 + t * (p2.y - self.y) as f32;
@@ -144,40 +142,36 @@ impl Node {
     pub fn is_on_line(p0: (f32, f32), p1: (f32, f32), p2: (f32, f32)) -> bool {
         // 0 -> x and 1 -> y
         let cross = ((p0.0 - p1.0) * (p2.1 - p1.1)) - ((p0.1 - p1.1) * (p2.0 - p1.0));
-        if cross.abs() < 0.05 {
+        if cross.abs() <= 0.1 {
             return true;
         }
         false
     }
 
     fn get_intersections(nodes: &[Node]) -> (i32, Vec<Node>) {
-        let mut i: usize = 0;
+        //TODO: Fix bug here, only getting partial of reslet reses: Vec<(f32, f32)>
         let mut reses: Vec<(f32, f32)> = Vec::new();
-        while i < nodes.len() {
-            for j in i + 2..nodes.len() + i {
-                println!("{} ,{}", i, j.rem_euclid(nodes.len()));
-                if nodes[i].line_intersect(
-                    nodes[(i + 1).rem_euclid(nodes.len())],
-                    nodes[(j).rem_euclid(nodes.len())],
-                    nodes[(j + 1).rem_euclid(nodes.len())],
-                ) {
-                    println!(
-                        "line {} {}, -> {} {} intersect",
-                        i,
-                        (i + 1).rem_euclid(nodes.len()),
-                        (j).rem_euclid(nodes.len()),
-                        (j + 1).rem_euclid(nodes.len())
-                    );
-                    let res = nodes[i].intersect_point(
+        for i in 0..nodes.len() {
+            let mut tmp: Vec<(f32, f32)> = (i + 2..nodes.len() + i)
+                .into_iter()
+                .filter(|j| {
+                    nodes[i].line_intersect(
                         nodes[(i + 1).rem_euclid(nodes.len())],
                         nodes[(j).rem_euclid(nodes.len())],
                         nodes[(j + 1).rem_euclid(nodes.len())],
-                    );
-                    reses.push(res);
-                }
-            }
-            i += 1;
+                    )
+                })
+                .map(|j| {
+                    nodes[i].intersect_point(
+                        nodes[(i + 1).rem_euclid(nodes.len())],
+                        nodes[(j).rem_euclid(nodes.len())],
+                        nodes[(j + 1).rem_euclid(nodes.len())],
+                    )
+                })
+                .collect();
+            reses.append(&mut tmp);
         }
+
         let mut tmp = Vec::new();
         let mut cpy = reses.to_vec();
         while !cpy.is_empty() {
@@ -190,27 +184,18 @@ impl Node {
                     nodes[(j + 1).rem_euclid(nodes.len())].into(),
                 ) {
                     instances += 1;
-                    println!(
-                        "Node ({},{}) is on line {} -> {}",
-                        node.0,
-                        node.1,
-                        j,
-                        (j + 1).rem_euclid(nodes.len())
-                    );
                 }
             }
-            if instances > 1 {
+            if instances > 0 {
                 tmp.push(node);
             }
-            println!("{}", instances);
-            i += 1;
         }
         println!("{} -> {}", reses.len(), tmp.len());
         let mut res: Vec<Node> = tmp
             .par_iter()
             .map(|node| Node::new(node.0.floor() as i32, node.1.floor() as i32))
             .collect();
-        res.sort();
+        res.par_sort();
         res.dedup();
         (res.len() as i32, res)
     }
@@ -263,7 +248,7 @@ impl Node {
             .into_iter()
             .map(|i| {
                 if nodes[i].0 == State::Unvisited {
-                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 25.0).exp()
+                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 32.0).exp()
                 } else {
                     0.0
                 }
@@ -289,7 +274,7 @@ impl Node {
         let start_val = Node::calc_path(&nodes, nodes.len());
         let mut weights: Box<[[i32; NUM_NODES]; NUM_NODES]> = Box::new([[1; NUM_NODES]; NUM_NODES]);
         let mut indexes: Vec<usize> = Vec::new();
-        for iter in 0..1024 {
+        for _ in 0..1024 {
             let mut tmp: Vec<(State, Node)> = nodes
                 .par_iter()
                 .map(|node| (State::Unvisited, node.clone()))
@@ -309,7 +294,6 @@ impl Node {
                     }
                 }
             }
-            println!("Iteration {} done", iter + 1)
         }
         let mut res: Vec<Node> = indexes.par_iter().map(|i| nodes[*i]).collect();
         res.insert(0, nodes[0]);
@@ -386,12 +370,13 @@ fn main() {
         node_1.distance_to(&node_2)
     );
 
-    const NUM_NODES: usize = 256;
+    const NUM_NODES: usize = 32;
 
     //setting up and solving rand nodes
     let nodes_unord = Node::create_rand_nodes::<NUM_NODES>(10, 1590, 10, 990);
     let nodes_nnn = Node::tsp_nnn(&nodes_unord);
     let nodes = Node::tsp_aco::<NUM_NODES>(&nodes_nnn);
+    // intersections.0 is number of intersections and intersections.1 is the intersections itself
     let intersections = Node::get_intersections(&nodes);
     println!("Intersections {}", intersections.0);
     // let nodes = Node::tsp_2opt(&nodes_aco);
@@ -400,8 +385,6 @@ fn main() {
     for node in intersections.1.iter() {
         println!("{}", node);
     }
-
-    println!("{}, {}", nodes_unord.len(), nodes.len());
 
     //setting up sdl
     let sdl_context = sdl2::init().unwrap();
@@ -446,14 +429,14 @@ fn main() {
                 .unwrap();
         }
 
-        for (i, node) in nodes.iter().enumerate() {
-            canvas.set_draw_color(Color::RGB(
-                255,
-                (100 + i.rem_euclid(255)) as u8,
-                55 + i.rem_euclid(255) as u8,
-            ));
-            canvas.draw_rect(node.into_rect(8, 8)).unwrap();
-        }
+        // for (i, node) in nodes.iter().enumerate() {
+        //     canvas.set_draw_color(Color::RGB(
+        //         255,
+        //         (100 + i.rem_euclid(255)) as u8,
+        //         (55 + i.rem_euclid(255)) as u8,
+        //     ));
+        //     canvas.draw_rect(node.into_rect(8, 8)).unwrap();
+        // }
 
         canvas.present();
     }
