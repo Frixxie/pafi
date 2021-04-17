@@ -149,11 +149,10 @@ impl Node {
     }
 
     fn get_intersections(nodes: &[Node]) -> (i32, Vec<Node>) {
-        //TODO: Fix bug here, only getting partial of reslet reses: Vec<(f32, f32)>
         let mut reses: Vec<(f32, f32)> = Vec::new();
         for i in 0..nodes.len() {
             let mut tmp: Vec<(f32, f32)> = (i + 2..nodes.len() + i)
-                .into_iter()
+                .into_par_iter()
                 .filter(|j| {
                     nodes[i].line_intersect(
                         nodes[(i + 1).rem_euclid(nodes.len())],
