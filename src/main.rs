@@ -10,13 +10,15 @@ use sdl2::pixels::Color;
 
 use rayon::prelude::*;
 
+use float_cmp::ApproxEq;
+
 #[derive(Clone, Copy, PartialEq)]
 enum State {
     Visited,
     Unvisited,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 struct Node {
     x: i32,
     y: i32,
@@ -118,13 +120,14 @@ impl Node {
         )
     }
 
-    pub fn create_rand_nodes<const N: usize>(
+    pub fn create_rand_nodes(
+        n: usize,
         min_x: i32,
         max_x: i32,
         min_y: i32,
         max_y: i32,
     ) -> Vec<Node> {
-        (0..N)
+        (0..n)
             .into_par_iter()
             .map(|_| Node::rand_new(min_x, max_x, min_y, max_y))
             .collect()
@@ -143,28 +146,30 @@ impl Node {
     pub fn is_on_line(p0: (f32, f32), p1: (f32, f32), p2: (f32, f32)) -> bool {
         // 0 -> x and 1 -> y
         let cross = ((p0.0 - p1.0) * (p2.1 - p1.1)) - ((p0.1 - p1.1) * (p2.0 - p1.0));
-        if cross.abs() <= 0.1 {
+        if cross.approx_eq(0.0, (0.0, 2)) {
             return true;
         }
         false
     }
 
     fn get_intersections(nodes: &[Node]) -> Vec<Node> {
+        //finds each intesecting point by using filter
+        //(checks if there is an intersection)
+        //and map (gets the point) instead of for loop and if statements
+        //Gets all possible intersection
         let reses: Vec<(f32, f32)> = (0..nodes.len())
             .into_par_iter()
-            .flat_map(|i|
-            //finds each intesecting point by using filter
-            //(checks if there is an intersection)
-            //and map (gets the point) instead of for loop and if statements
-            (i + 2..nodes.len() + i)
-                .into_par_iter()
-                .filter_map(move |j|
-                    nodes[i].intersect_point(
-                        nodes[(i + 1).rem_euclid(nodes.len())],
-                        nodes[(j).rem_euclid(nodes.len())],
-                        nodes[(j + 1).rem_euclid(nodes.len())],
-                    )
-                ))
+            .flat_map(|i| {
+                (i + 2..nodes.len() + i)
+                    .into_par_iter()
+                    .filter_map(move |j| {
+                        nodes[i].intersect_point(
+                            nodes[(i + 1).rem_euclid(nodes.len())],
+                            nodes[(j).rem_euclid(nodes.len())],
+                            nodes[(j + 1).rem_euclid(nodes.len())],
+                        )
+                    })
+            })
             .collect();
 
         let mut tmp = Vec::new();
@@ -181,7 +186,7 @@ impl Node {
                     instances += 1;
                 }
             }
-            if instances > 0 {
+            if instances > 1 {
                 tmp.push(node);
             }
         }
@@ -240,10 +245,10 @@ impl Node {
 
     fn choose_next_node(idx: usize, nodes: &mut [(State, Node)], weights: &mut [i32]) -> usize {
         let new_weights: Vec<f32> = (0..weights.len())
-            .into_iter()
+            .into_par_iter()
             .map(|i| {
                 if nodes[i].0 == State::Unvisited {
-                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 32.0).exp()
+                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 64.0).exp()
                 } else {
                     0.0
                 }
@@ -258,21 +263,24 @@ impl Node {
             index = dist.sample(&mut rng);
         }
         nodes[index].0 = State::Visited;
-        weights[index] += 1;
+        weights[index] += 2;
         // println!("{:?}, {:?}, {} -> {}", weights, new_weights, idx, index);
         // println!("{} -> {}", idx, index);
         index
     }
 
     //TODO: refactor and use better algorithm for this
-    pub fn tsp_aco<const NUM_NODES: usize>(nodes: &[Node]) -> Vec<Node> {
+    pub fn tsp_aco(nodes: &[Node]) -> Vec<Node> {
         let start_val = Node::calc_path(&nodes, nodes.len());
-        let mut weights: Box<[[i32; NUM_NODES]; NUM_NODES]> = Box::new([[1; NUM_NODES]; NUM_NODES]);
+        let mut weights: Vec<Vec<i32>> = (0..nodes.len())
+            .into_par_iter()
+            .map(|_| vec![1; nodes.len()])
+            .collect();
         let mut indexes: Vec<usize> = Vec::new();
-        for _ in 0..1024 {
+        for _ in 0..2048 {
             let mut tmp: Vec<(State, Node)> = nodes
                 .par_iter()
-                .map(|node| (State::Unvisited, node.clone()))
+                .map(|node| (State::Unvisited, *node))
                 .collect();
             let mut index = 0;
             let mut all_visited = false;
@@ -307,7 +315,7 @@ impl Node {
                 while !cpy.is_empty() {
                     let node = cpy.remove(j);
                     reses_inner.push(node);
-                    let mut min: f32 = std::f32::INFINITY;
+                    let mut min: f32 = std::f32::MAX;
                     let mut min_k: usize = 0;
                     for (k, other_node) in cpy.iter().enumerate() {
                         let tmp = node.distance_to(other_node);
@@ -326,7 +334,7 @@ impl Node {
             .map(|nodes| Node::calc_path(nodes, nodes.len()))
             .collect();
 
-        let mut min: f32 = std::f32::INFINITY;
+        let mut min: f32 = std::f32::MAX;
         let mut min_i: usize = 0;
         for (i, len) in paths_len.iter().enumerate() {
             if len < &min {
@@ -368,18 +376,13 @@ fn main() {
     const NUM_NODES: usize = 32;
 
     //setting up and solving rand nodes
-    let nodes_unord = Node::create_rand_nodes::<NUM_NODES>(10, 1590, 10, 990);
+    let nodes_unord = Node::create_rand_nodes(NUM_NODES, 10, 1590, 10, 990);
     let nodes_nnn = Node::tsp_nnn(&nodes_unord);
-    let nodes = Node::tsp_aco::<NUM_NODES>(&nodes_nnn);
+    let nodes = Node::tsp_aco(&nodes_nnn);
     // intersections.0 is number of intersections and intersections.1 is the intersections itself
     let intersections = Node::get_intersections(&nodes);
     println!("Intersections {}", intersections.len());
     // let nodes = Node::tsp_2opt(&nodes_aco);
-    //
-
-    for node in intersections.iter() {
-        println!("{}", node);
-    }
 
     //setting up sdl
     let sdl_context = sdl2::init().unwrap();
@@ -424,14 +427,14 @@ fn main() {
                 .unwrap();
         }
 
-        // for (i, node) in nodes.iter().enumerate() {
-        //     canvas.set_draw_color(Color::RGB(
-        //         255,
-        //         (100 + i.rem_euclid(255)) as u8,
-        //         (55 + i.rem_euclid(255)) as u8,
-        //     ));
-        //     canvas.draw_rect(node.into_rect(8, 8)).unwrap();
-        // }
+        for (i, node) in nodes.iter().enumerate() {
+            canvas.set_draw_color(Color::RGB(
+                255,
+                (100 + i.rem_euclid(255)) as u8,
+                (55 + i.rem_euclid(255)) as u8,
+            ));
+            canvas.draw_rect(node.into_rect(8, 8)).unwrap();
+        }
 
         canvas.present();
     }

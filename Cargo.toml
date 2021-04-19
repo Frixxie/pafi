@@ -10,3 +10,4 @@ edition = "2018"
 rand = { version = "0.7", default-features = true }
 sdl2 = "0.34.2"
 rayon = "1.5.0"
+float-cmp = "0.8.0"
