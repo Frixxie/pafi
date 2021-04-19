@@ -87,10 +87,10 @@ impl Node {
         false
     }
 
-    pub fn intersect_point(&self, p2: Node, p3: Node, p4: Node) -> (f32, f32) {
+    pub fn intersect_point(&self, p2: Node, p3: Node, p4: Node) -> Option<(f32, f32)> {
         let d = ((self.x - p2.x) * (p3.y - p4.y)) - ((self.y - p2.y) * (p3.x - p4.x));
         if d == 0 {
-            return (0.0, 0.0);
+            return None;
         }
         let t =
             ((self.x - p3.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x)) as f32 / d as f32;
@@ -99,13 +99,14 @@ impl Node {
         if t >= 0.0 && t <= 1.0 {
             let x = self.x as f32 + t * (p2.x - self.x) as f32;
             let y = self.y as f32 + t * (p2.y - self.y) as f32;
-            return (x, y);
+            Some((x, y))
         } else if u >= 0.0 && u <= 1.0 {
             let x = p3.x as f32 + u * (p4.x - p3.x) as f32;
             let y = p3.y as f32 + u * (p4.y - p3.y) as f32;
-            return (x, y);
+            Some((x, y))
+        } else {
+            None
         }
-        return (0.0, 0.0);
     }
 
     pub fn into_rect(&self, w: i32, h: i32) -> sdl2::rect::Rect {
@@ -148,28 +149,23 @@ impl Node {
         false
     }
 
-    fn get_intersections(nodes: &[Node]) -> (i32, Vec<Node>) {
-        let mut reses: Vec<(f32, f32)> = Vec::new();
-        for i in 0..nodes.len() {
-            let mut tmp: Vec<(f32, f32)> = (i + 2..nodes.len() + i)
+    fn get_intersections(nodes: &[Node]) -> Vec<Node> {
+        let reses: Vec<(f32, f32)> = (0..nodes.len())
+            .into_par_iter()
+            .flat_map(|i|
+            //finds each intesecting point by using filter
+            //(checks if there is an intersection)
+            //and map (gets the point) instead of for loop and if statements
+            (i + 2..nodes.len() + i)
                 .into_par_iter()
-                .filter(|j| {
-                    nodes[i].line_intersect(
-                        nodes[(i + 1).rem_euclid(nodes.len())],
-                        nodes[(j).rem_euclid(nodes.len())],
-                        nodes[(j + 1).rem_euclid(nodes.len())],
-                    )
-                })
-                .map(|j| {
+                .filter_map(move |j|
                     nodes[i].intersect_point(
                         nodes[(i + 1).rem_euclid(nodes.len())],
                         nodes[(j).rem_euclid(nodes.len())],
                         nodes[(j + 1).rem_euclid(nodes.len())],
                     )
-                })
-                .collect();
-            reses.append(&mut tmp);
-        }
+                ))
+            .collect();
 
         let mut tmp = Vec::new();
         let mut cpy = reses.to_vec();
@@ -196,7 +192,7 @@ impl Node {
             .collect();
         res.par_sort();
         res.dedup();
-        (res.len() as i32, res)
+        res
     }
 
     /// or something
@@ -232,7 +228,7 @@ impl Node {
             }
             i += 1;
             let ret = Node::get_intersections(&reses);
-            println!("intersections {}", ret.0);
+            println!("intersections {}", ret.len());
             let tmp = Node::calc_path(&reses, reses.len());
             sum += tmp - start_val;
             start_val = tmp;
@@ -377,11 +373,11 @@ fn main() {
     let nodes = Node::tsp_aco::<NUM_NODES>(&nodes_nnn);
     // intersections.0 is number of intersections and intersections.1 is the intersections itself
     let intersections = Node::get_intersections(&nodes);
-    println!("Intersections {}", intersections.0);
+    println!("Intersections {}", intersections.len());
     // let nodes = Node::tsp_2opt(&nodes_aco);
     //
 
-    for node in intersections.1.iter() {
+    for node in intersections.iter() {
         println!("{}", node);
     }
 
@@ -415,7 +411,7 @@ fn main() {
             }
         }
 
-        for node in intersections.1.iter() {
+        for node in intersections.iter() {
             canvas.set_draw_color(Color::RGB(255, 255, 255));
             canvas.draw_rect(node.into_rect(8, 8)).unwrap();
         }
