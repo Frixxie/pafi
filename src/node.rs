@@ -283,7 +283,10 @@ impl Node {
                 .sum::<f32>()
                 / paths_len.len() as f32
         );
-        println!("AFTER: {}", Node::calc_path(&reses[min_i].to_vec(), reses[min_i].to_vec().len()));
+        println!(
+            "AFTER: {}",
+            Node::calc_path(&reses[min_i].to_vec(), reses[min_i].to_vec().len())
+        );
         reses[min_i].to_vec()
     }
 
@@ -302,17 +305,13 @@ impl Node {
                     cpy.swap(i, j.rem_euclid(len));
                     let new_path = Node::calc_path(&cpy, len);
                     if new_path < best_path {
-                        println!("{}, {}", best_path, new_path);
+                        println!("{} -> {}, {}, {} <-> {}", best_path, new_path, best_path - new_path, i, j);
                         best_path = new_path;
                         res = cpy.to_vec();
                         times_swapped += 1;
-                        break
                     } else {
                         cpy.swap(j.rem_euclid(len), i);
                     }
-                }
-                if times_swapped > 0 {
-                    break;
                 }
             }
         }
