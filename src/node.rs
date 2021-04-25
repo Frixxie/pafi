@@ -236,6 +236,7 @@ impl Node {
 
     /// Traveling salesman problem next nearest neighbour
     pub fn tsp_nnn(nodes: &[Node]) -> Vec<Node> {
+        println!("BEFORE {}", Node::calc_path(&nodes, nodes.len()));
         let reses: Vec<Vec<Node>> = (0..nodes.len())
             .into_par_iter()
             .map(|i| {
@@ -256,7 +257,6 @@ impl Node {
                     }
                     j = min_k
                 }
-                println!("{}", i);
                 reses_inner
             })
             .collect();
@@ -283,19 +283,22 @@ impl Node {
                 .sum::<f32>()
                 / paths_len.len() as f32
         );
+        println!("AFTER: {}", Node::calc_path(&reses[min_i].to_vec(), reses[min_i].to_vec().len()));
         reses[min_i].to_vec()
     }
 
-    pub fn tsp_brute(nodes: &[Node]) -> Vec<Node> {
+    /// Traveling salesman problem brute search optimalization
+    /// Attemps to check if the current path has any better paths to use
+    pub fn tsp_brute_search_optim(nodes: &[Node]) -> Vec<Node> {
         let mut cpy = nodes.to_vec();
-        let mut best_path = Node::calc_path(&cpy, cpy.len());
-        let mut res = cpy.to_vec();
         let len = cpy.len();
+        let mut best_path = Node::calc_path(&cpy, len);
+        let mut res = cpy.to_vec();
         let mut times_swapped = 1;
         while times_swapped > 0 {
             times_swapped = 0;
             for i in 0..cpy.len() {
-                for j in i + 1..cpy.len() {
+                for j in i + 1..cpy.len() + 1 {
                     cpy.swap(i, j.rem_euclid(len));
                     let new_path = Node::calc_path(&cpy, len);
                     if new_path < best_path {
@@ -303,9 +306,13 @@ impl Node {
                         best_path = new_path;
                         res = cpy.to_vec();
                         times_swapped += 1;
+                        break
                     } else {
                         cpy.swap(j.rem_euclid(len), i);
                     }
+                }
+                if times_swapped > 0 {
+                    break;
                 }
             }
         }
