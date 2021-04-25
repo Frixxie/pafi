@@ -291,7 +291,7 @@ impl Node {
     }
 
     /// Traveling salesman problem brute search optimalization
-    /// Attemps to check if the current path has any better paths to use
+    /// Attempts to check if the current path has any better paths to use
     pub fn tsp_brute_search_optim(nodes: &[Node]) -> Vec<Node> {
         let mut cpy = nodes.to_vec();
         let len = cpy.len();
@@ -301,11 +301,21 @@ impl Node {
         while times_swapped > 0 {
             times_swapped = 0;
             for i in 0..cpy.len() {
-                for j in i + 1..cpy.len() + 1 {
+                for j in 0..cpy.len() + 1 {
+                    if i == j.rem_euclid(len) {
+                        continue;
+                    }
                     cpy.swap(i, j.rem_euclid(len));
                     let new_path = Node::calc_path(&cpy, len);
                     if new_path < best_path {
-                        println!("{} -> {}, {}, {} <-> {}", best_path, new_path, best_path - new_path, i, j);
+                        println!(
+                            "{} -> {}, {}, {} <-> {}",
+                            best_path,
+                            new_path,
+                            best_path - new_path,
+                            i,
+                            j
+                        );
                         best_path = new_path;
                         res = cpy.to_vec();
                         times_swapped += 1;

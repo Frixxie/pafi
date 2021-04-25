@@ -19,9 +19,9 @@ fn main() {
 
     //setting up and solving rand nodes
     let nodes_unord = Node::create_rand_nodes(NUM_NODES, 10, 1590, 10, 990);
-    // let nodes_nnn = Node::tsp_nnn(&nodes_unord);
-    let nodes_aco = Node::tsp_aco(&nodes_unord);
-    let nodes = Node::tsp_brute_search_optim(&nodes_aco);
+    let nodes_nnn = Node::tsp_nnn(&nodes_unord);
+    // let nodes_aco = Node::tsp_aco(&nodes_unord);
+    let nodes = Node::tsp_brute_search_optim(&nodes_nnn);
     // intersections.0 is number of intersections and intersections.1 is the intersections itself
     let intersections = Node::get_intersections(&nodes);
     println!("Intersections {}", intersections.len());
