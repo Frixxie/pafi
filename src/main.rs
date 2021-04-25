@@ -16,12 +16,13 @@ fn main() {
         node_1.distance_to(&node_2)
     );
 
-    const NUM_NODES: usize = 32;
+    const NUM_NODES: usize = 128;
 
     //setting up and solving rand nodes
     let nodes_unord = Node::create_rand_nodes(NUM_NODES, 10, 1590, 10, 990);
-    let nodes_nnn = Node::tsp_nnn(&nodes_unord);
-    let nodes = Node::tsp_aco(&nodes_nnn);
+    // let nodes_nnn = Node::tsp_nnn(&nodes_unord);
+    let nodes_aco = Node::tsp_aco(&nodes_unord);
+    let nodes = Node::tsp_brute(&nodes_aco);
     // intersections.0 is number of intersections and intersections.1 is the intersections itself
     let intersections = Node::get_intersections(&nodes);
     println!("Intersections {}", intersections.len());

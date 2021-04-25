@@ -1,8 +1,8 @@
+use float_cmp::ApproxEq;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
-use std::fmt;
 use rayon::prelude::*;
-use float_cmp::ApproxEq;
+use std::fmt;
 
 #[derive(Clone, Copy, PartialEq)]
 enum State {
@@ -64,24 +64,7 @@ impl Node {
 
     /// See: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#Given_two_points_on_each_line
     /// For explaination on how this works
-    pub fn line_intersect(&self, p2: Node, p3: Node, p4: Node) -> bool {
-        let d = ((self.x - p2.x) * (p3.y - p4.y)) - ((self.y - p2.y) * (p3.x - p4.x));
-        if d == 0 {
-            return false;
-        }
-        let t =
-            ((self.x - p3.x) * (p3.y - p4.y) - (self.y - p3.y) * (p3.x - p4.x)) as f32 / d as f32;
-        let u = ((p2.x - self.x) * (self.y - p3.y) - (p2.y - self.y) * (self.x - p3.x)) as f32
-            / d as f32;
-        if t >= 0.0 && t <= 1.0 {
-            return true;
-        } else if u >= 0.0 && u <= 1.0 {
-            return true;
-        }
-        false
-    }
-
-    pub fn intersect_point(&self, p2: Node, p3: Node, p4: Node) -> Option<(f32, f32)> {
+    pub fn line_intersect_point(&self, p2: Node, p3: Node, p4: Node) -> Option<(f32, f32)> {
         let d = ((self.x - p2.x) * (p3.y - p4.y)) - ((self.y - p2.y) * (p3.x - p4.x));
         if d == 0 {
             return None;
@@ -155,7 +138,7 @@ impl Node {
                 (i + 2..nodes.len() + i)
                     .into_par_iter()
                     .filter_map(move |j| {
-                        nodes[i].intersect_point(
+                        nodes[i].line_intersect_point(
                             nodes[(i + 1).rem_euclid(nodes.len())],
                             nodes[(j).rem_euclid(nodes.len())],
                             nodes[(j + 1).rem_euclid(nodes.len())],
@@ -301,6 +284,32 @@ impl Node {
                 / paths_len.len() as f32
         );
         reses[min_i].to_vec()
+    }
+
+    pub fn tsp_brute(nodes: &[Node]) -> Vec<Node> {
+        let mut cpy = nodes.to_vec();
+        let mut best_path = Node::calc_path(&cpy, cpy.len());
+        let mut res = cpy.to_vec();
+        let len = cpy.len();
+        let mut times_swapped = 1;
+        while times_swapped > 0 {
+            times_swapped = 0;
+            for i in 0..cpy.len() {
+                for j in i + 1..cpy.len() {
+                    cpy.swap(i, j.rem_euclid(len));
+                    let new_path = Node::calc_path(&cpy, len);
+                    if new_path < best_path {
+                        println!("{}, {}", best_path, new_path);
+                        best_path = new_path;
+                        res = cpy.to_vec();
+                        times_swapped += 1;
+                    } else {
+                        cpy.swap(j.rem_euclid(len), i);
+                    }
+                }
+            }
+        }
+        res
     }
 }
 
