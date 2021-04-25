@@ -186,7 +186,7 @@ impl Node {
                     instances += 1;
                 }
             }
-            if instances > 1 {
+            if instances > 0 {
                 tmp.push(node);
             }
         }
@@ -198,49 +198,6 @@ impl Node {
         res.par_sort();
         res.dedup();
         res
-    }
-
-    /// or something
-    pub fn tsp_2opt(nodes: &[Node]) -> Vec<Node> {
-        let mut reses: Vec<Node> = nodes.to_vec();
-        let mut i: usize = 0;
-        let mut start_val = Node::calc_path(&reses, reses.len());
-        let init_val = start_val;
-        let mut sum = 0.0;
-        println!("current path_len {}", Node::calc_path(&nodes, reses.len()));
-        while i < nodes.len() {
-            println!(
-                "current path_len {}, startval {}",
-                Node::calc_path(&reses, reses.len()),
-                init_val
-            );
-            for j in i + 2..reses.len() + i {
-                if reses[i].line_intersect(
-                    reses[(i + 1).rem_euclid(nodes.len())],
-                    reses[(j).rem_euclid(nodes.len())],
-                    reses[(j + 1).rem_euclid(nodes.len())],
-                ) {
-                    reses.swap(
-                        (i + 1).rem_euclid(nodes.len()),
-                        (j + 1).rem_euclid(nodes.len()),
-                    );
-                    println!(
-                        "Swapped {} {}",
-                        (i + 1).rem_euclid(nodes.len()),
-                        (j + 1).rem_euclid(nodes.len())
-                    );
-                }
-            }
-            i += 1;
-            let ret = Node::get_intersections(&reses);
-            println!("intersections {}", ret.len());
-            let tmp = Node::calc_path(&reses, reses.len());
-            sum += tmp - start_val;
-            start_val = tmp;
-            println!("{}", sum);
-        }
-        println!("{}", sum / (sum + start_val));
-        reses
     }
 
     fn choose_next_node(idx: usize, nodes: &mut [(State, Node)], weights: &mut [i32]) -> usize {
@@ -263,9 +220,7 @@ impl Node {
             index = dist.sample(&mut rng);
         }
         nodes[index].0 = State::Visited;
-        weights[index] += 2;
-        // println!("{:?}, {:?}, {} -> {}", weights, new_weights, idx, index);
-        // println!("{} -> {}", idx, index);
+        weights[index] += 1;
         index
     }
 
@@ -326,6 +281,7 @@ impl Node {
                     }
                     j = min_k
                 }
+                println!("{}", i);
                 reses_inner
             })
             .collect();
@@ -382,7 +338,6 @@ fn main() {
     // intersections.0 is number of intersections and intersections.1 is the intersections itself
     let intersections = Node::get_intersections(&nodes);
     println!("Intersections {}", intersections.len());
-    // let nodes = Node::tsp_2opt(&nodes_aco);
 
     //setting up sdl
     let sdl_context = sdl2::init().unwrap();
