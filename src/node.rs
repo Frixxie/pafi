@@ -298,27 +298,24 @@ impl Node {
         let mut best_path = Node::calc_path(&cpy, len);
         let mut res = cpy.to_vec();
         let mut times_swapped = 1;
+        let mut tot_swapped = 0;
+        let mut tot_changed: f32 = 0.0;
         while times_swapped > 0 {
             times_swapped = 0;
             for i in 0..cpy.len() {
-                for j in 0..cpy.len() + 1 {
-                    if i == j.rem_euclid(len) {
-                        continue;
-                    }
+                for j in i + 1..cpy.len() + 1 {
                     cpy.swap(i, j.rem_euclid(len));
                     let new_path = Node::calc_path(&cpy, len);
                     if new_path < best_path {
+                        tot_swapped += 1;
+                        times_swapped += 1;
+                        tot_changed += best_path - new_path;
                         println!(
-                            "{} -> {}, {}, {} <-> {}",
-                            best_path,
-                            new_path,
-                            best_path - new_path,
-                            i,
-                            j
+                            "{} -> {}, {}, {} <-> {}, {}, {}",
+                            best_path, new_path, tot_changed, i, j, times_swapped, tot_swapped
                         );
                         best_path = new_path;
                         res = cpy.to_vec();
-                        times_swapped += 1;
                     } else {
                         cpy.swap(j.rem_euclid(len), i);
                     }
