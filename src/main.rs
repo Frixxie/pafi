@@ -46,10 +46,10 @@ fn main() {
             }
         }
 
-        for node in intersections.iter() {
-            canvas.set_draw_color(Color::RGB(255, 255, 255));
-            canvas.draw_rect(node.into_rect(8, 8)).unwrap();
-        }
+        // for node in intersections.iter() {
+        //     canvas.set_draw_color(Color::RGB(255, 255, 255));
+        //     canvas.draw_rect(node.into_rect(8, 8)).unwrap();
+        // }
 
         //drawing nodes
         canvas.set_draw_color(Color::RGB(255, 100, 55));
