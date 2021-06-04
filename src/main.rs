@@ -5,13 +5,13 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 
 fn main() {
-    const NUM_NODES: usize = 512;
+    const NUM_NODES: usize = 256;
 
     //setting up and solving rand nodes
     let nodes_unord = Node::create_rand_nodes(NUM_NODES, 10, 1590, 10, 990);
     let nodes_nnn = Node::tsp_nnn(&nodes_unord);
-    // let nodes_aco = Node::tsp_aco(&nodes_unord);
-    let nodes = Node::tsp_brute_search_optim(&nodes_nnn);
+    let nodes_aco = Node::tsp_aco(&nodes_nnn);
+    let nodes = Node::tsp_brute_search_optim(&nodes_aco);
 
     let intersections = Node::get_intersections(&nodes);
     println!("Intersections {}", intersections.len());

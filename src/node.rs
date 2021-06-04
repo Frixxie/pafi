@@ -127,11 +127,11 @@ impl Node {
         false
     }
 
+    /// finds each intesecting point by using filter
+    /// (checks if there is an intersection)
+    /// and map (gets the point) instead of for loop and if statements
+    /// Gets all possible intersection
     pub fn get_intersections(nodes: &[Node]) -> Vec<Node> {
-        //finds each intesecting point by using filter
-        //(checks if there is an intersection)
-        //and map (gets the point) instead of for loop and if statements
-        //Gets all possible intersection
         let reses: Vec<(f32, f32)> = (0..nodes.len())
             .into_par_iter()
             .flat_map(|i| {
@@ -180,7 +180,7 @@ impl Node {
             .into_par_iter()
             .map(|i| {
                 if nodes[i].0 == State::Unvisited {
-                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 64.0).exp()
+                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 32.0).exp()
                 } else {
                     0.0
                 }
@@ -207,7 +207,7 @@ impl Node {
             .map(|_| vec![1; nodes.len()])
             .collect();
         let mut indexes: Vec<usize> = Vec::new();
-        for _ in 0..2048 {
+        for _ in 0..4096 {
             let mut tmp: Vec<(State, Node)> = nodes
                 .par_iter()
                 .map(|node| (State::Unvisited, *node))
@@ -292,6 +292,7 @@ impl Node {
 
     /// Traveling salesman problem brute search optimalization
     /// Attempts to check if the current path has any better paths to use
+    /// If this is the case it checks if there are more
     pub fn tsp_brute_search_optim(nodes: &[Node]) -> Vec<Node> {
         let mut cpy = nodes.to_vec();
         let len = cpy.len();
