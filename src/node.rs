@@ -219,13 +219,10 @@ impl Node {
             while !all_visited {
                 index = Node::choose_next_node(index, &mut tmp, &mut weights[index]);
                 indexes.push(index);
-                all_visited = true;
-                for node in &tmp {
-                    if node.0 == State::Unvisited {
-                        all_visited = false;
-                        break;
-                    }
-                }
+                all_visited = tmp
+                    .par_iter()
+                    .find_any(|node| node.0 == State::Unvisited)
+                    .is_none();
             }
         }
         let mut res: Vec<Node> = indexes.par_iter().map(|i| nodes[*i]).collect();

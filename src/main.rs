@@ -5,7 +5,7 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 
 fn main() {
-    const NUM_NODES: usize = 256;
+    const NUM_NODES: usize = 32;
 
     //setting up and solving rand nodes
     let nodes_unord = Node::create_rand_nodes(NUM_NODES, 10, 1590, 10, 990);
