@@ -177,10 +177,10 @@ impl Node {
 
     fn choose_next_node(idx: usize, nodes: &mut [(State, Node)], weights: &mut [i32]) -> usize {
         let new_weights: Vec<f32> = (0..weights.len())
-            .into_par_iter()
+            .into_iter()
             .map(|i| {
                 if nodes[i].0 == State::Unvisited {
-                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 128.0).exp()
+                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 32.0).exp()
                 } else {
                     0.0
                 }
@@ -208,10 +208,8 @@ impl Node {
             .collect();
         let mut indexes: Vec<usize> = Vec::new();
         for i in 0..iterations {
-            let mut tmp: Vec<(State, Node)> = nodes
-                .par_iter()
-                .map(|node| (State::Unvisited, *node))
-                .collect();
+            let mut tmp: Vec<(State, Node)> =
+                nodes.iter().map(|node| (State::Unvisited, *node)).collect();
             let mut index = 0;
             let mut all_visited = false;
             tmp[0].0 = State::Visited;
@@ -220,8 +218,8 @@ impl Node {
                 index = Node::choose_next_node(index, &mut tmp, &mut weights[index]);
                 indexes.push(index);
                 all_visited = tmp
-                    .par_iter()
-                    .find_any(|node| node.0 == State::Unvisited)
+                    .iter()
+                    .find(|node| node.0 == State::Unvisited)
                     .is_none();
             }
             println!("{} iterations done", i)
