@@ -200,14 +200,14 @@ impl Node {
     }
 
     //TODO: refactor and use better algorithm for this
-    pub fn tsp_aco(nodes: &[Node]) -> Vec<Node> {
+    pub fn tsp_aco(nodes: &[Node], iterations: usize) -> Vec<Node> {
         let start_val = Node::calc_path(&nodes, nodes.len());
         let mut weights: Vec<Vec<i32>> = (0..nodes.len())
             .into_par_iter()
             .map(|_| vec![1; nodes.len()])
             .collect();
         let mut indexes: Vec<usize> = Vec::new();
-        for _ in 0..4096 {
+        for i in 0..iterations {
             let mut tmp: Vec<(State, Node)> = nodes
                 .par_iter()
                 .map(|node| (State::Unvisited, *node))
@@ -224,6 +224,7 @@ impl Node {
                     .find_any(|node| node.0 == State::Unvisited)
                     .is_none();
             }
+            println!("{} iterations done", i)
         }
         let mut res: Vec<Node> = indexes.par_iter().map(|i| nodes[*i]).collect();
         res.insert(0, nodes[0]);
