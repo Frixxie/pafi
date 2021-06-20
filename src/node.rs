@@ -180,7 +180,7 @@ impl Node {
             .into_par_iter()
             .map(|i| {
                 if nodes[i].0 == State::Unvisited {
-                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 32.0).exp()
+                    weights[i] as f32 * (-nodes[idx].1.distance_to(&nodes[i].1) / 128.0).exp()
                 } else {
                     0.0
                 }
